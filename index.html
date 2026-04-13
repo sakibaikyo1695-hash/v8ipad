@@ -1,0 +1,2887 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>SLAP-GAP | Air Nav</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0f1a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ======== ROOT VARIABLES ======== */
+:root{
+  --bg-deep:#04080f;
+  --bg-panel:#080e1a;
+  --bg-card:#0d1525;
+  --bg-elevated:#111c30;
+  --border-dim:#1a2840;
+  --border-glow:#1e3a5f;
+  --accent-blue:#0af;
+  --accent-cyan:#00e5ff;
+  --accent-green:#00e676;
+  --accent-amber:#ffab00;
+  --accent-red:#ff1744;
+  --accent-purple:#7c4dff;
+  --text-primary:#d0e8ff;
+  --text-secondary:#7899b8;
+  --text-dim:#3a5070;
+  --text-bright:#e8f4ff;
+  --glow-blue:0 0 12px rgba(0,170,255,0.45);
+  --glow-green:0 0 12px rgba(0,230,118,0.45);
+  --glow-red:0 0 12px rgba(255,23,68,0.45);
+  --glow-amber:0 0 12px rgba(255,171,0,0.45);
+  --radius:6px;
+  --sidebar-w:340px;
+  --font-ui:'Rajdhani',sans-serif;
+  --font-mono:'Share Tech Mono',monospace;
+  --font-display:'Orbitron',sans-serif;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+html,body{
+  margin:0;padding:0;
+  background:var(--bg-deep);
+  color:var(--text-primary);
+  font-family:var(--font-ui);
+  font-size:15px;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
+}
+
+/* ======== MAP — NO FILTER, CLEAN VIEW ======== */
+#map{
+  position:absolute;
+  top:0;bottom:0;left:0;
+  right:var(--sidebar-w);
+  background:#0a0a0a;
+  transition:right 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+/* No tile filter at all — clear map */
+.leaflet-container{background:#0a0a0a}
+
+/* When sidebar is collapsed, map fills full width */
+body.sidebar-collapsed #map{right:0}
+body.sidebar-collapsed #sidebar{transform:translateX(100%)}
+
+/* ======== SIDEBAR ======== */
+#sidebar{
+  position:absolute;right:0;top:0;bottom:0;
+  width:var(--sidebar-w);
+  background:var(--bg-panel);
+  border-left:1px solid var(--border-dim);
+  overflow-y:auto;
+  overflow-x:hidden;
+  display:flex;
+  flex-direction:column;
+  -webkit-overflow-scrolling:touch;
+  transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  z-index:500;
+}
+#sidebar::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-track{background:transparent}
+#sidebar::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:2px}
+
+/* ======== SIDEBAR TOGGLE BUTTON ======== */
+#sidebarToggleBtn{
+  position:absolute;
+  bottom:32px;
+  left:0;
+  z-index:600;
+  width:28px;
+  height:52px;
+  background:var(--bg-panel);
+  border:1px solid var(--border-glow);
+  border-left:none;
+  border-radius:0 8px 8px 0;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:left 0.35s cubic-bezier(0.4,0,0.2,1),background 0.2s;
+  box-shadow:3px 0 12px rgba(0,0,0,0.4);
+}
+#sidebarToggleBtn:hover{background:var(--bg-elevated)}
+body.sidebar-collapsed #sidebarToggleBtn{
+  left:0;
+  border-radius:0 8px 8px 0;
+}
+.toggle-arrow{
+  font-size:13px;
+  color:var(--accent-cyan);
+  transition:transform 0.35s;
+  line-height:1;
+  writing-mode:vertical-rl;
+  letter-spacing:0;
+}
+body.sidebar-collapsed .toggle-arrow{transform:rotate(180deg)}
+
+/* ======== SIDEBAR HEADER ======== */
+.sidebar-header{
+  padding:14px 16px 10px;
+  border-bottom:1px solid var(--border-dim);
+  background:var(--bg-deep);
+  flex-shrink:0;
+}
+.sidebar-header h1{
+  margin:0 0 2px;
+  font-family:var(--font-display);
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:2px;
+  color:var(--accent-cyan);
+  text-shadow:0 0 16px rgba(0,229,255,0.5);
+}
+.sidebar-header .subtitle{
+  font-family:var(--font-mono);
+  font-size:10px;
+  color:var(--text-dim);
+  letter-spacing:1px;
+}
+
+/* ======== SECTIONS ======== */
+.section{
+  padding:10px 14px;
+  border-bottom:1px solid var(--border-dim);
+}
+.section:last-child{border-bottom:none}
+
+.section-label{
+  font-family:var(--font-display);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:2.5px;
+  color:var(--text-dim);
+  text-transform:uppercase;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.section-label::after{
+  content:'';flex:1;
+  height:1px;
+  background:linear-gradient(to right,var(--border-dim),transparent);
+}
+
+/* ======== BUTTONS ======== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  gap:5px;
+  padding:8px 12px;
+  margin:3px 2px;
+  background:var(--bg-elevated);
+  color:var(--text-primary);
+  border:1px solid var(--border-glow);
+  border-radius:var(--radius);
+  font-family:var(--font-ui);
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:0.5px;
+  cursor:pointer;
+  text-decoration:none;
+  transition:all 0.18s;
+  -webkit-user-select:none;
+  user-select:none;
+  white-space:nowrap;
+}
+.btn:hover,.btn:active{
+  background:var(--border-glow);
+  border-color:var(--accent-blue);
+  color:var(--accent-cyan);
+  box-shadow:var(--glow-blue);
+}
+.btn.small{padding:5px 9px;font-size:11px;margin:2px 1px}
+.btn.full{width:100%;margin:3px 0}
+
+.btn-green{background:rgba(0,230,118,0.12);border-color:rgba(0,230,118,0.4);color:var(--accent-green)}
+.btn-green:hover{background:rgba(0,230,118,0.22);box-shadow:var(--glow-green)}
+.btn-red{background:rgba(255,23,68,0.12);border-color:rgba(255,23,68,0.4);color:var(--accent-red)}
+.btn-red:hover{background:rgba(255,23,68,0.22);box-shadow:var(--glow-red)}
+.btn-amber{background:rgba(255,171,0,0.12);border-color:rgba(255,171,0,0.4);color:var(--accent-amber)}
+.btn-amber:hover{background:rgba(255,171,0,0.22);box-shadow:var(--glow-amber)}
+.btn-purple{background:rgba(124,77,255,0.12);border-color:rgba(124,77,255,0.4);color:#b39ddb}
+.btn-purple:hover{background:rgba(124,77,255,0.22);box-shadow:0 0 12px rgba(124,77,255,0.4)}
+.btn-blue{background:rgba(0,170,255,0.14);border-color:rgba(0,170,255,0.4);color:var(--accent-blue)}
+.btn-blue:hover{background:rgba(0,170,255,0.24);box-shadow:var(--glow-blue)}
+.btn-teal{background:rgba(0,229,255,0.10);border-color:rgba(0,229,255,0.35);color:var(--accent-cyan)}
+.btn-teal:hover{background:rgba(0,229,255,0.20);box-shadow:var(--glow-blue)}
+
+.btn-row{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.btn-row .btn{flex:1;min-width:0;font-size:11px;padding:8px 5px}
+
+/* ======== INPUTS ======== */
+input[type=text],input[type=number],input[type=password],textarea,select{
+  width:100%;
+  background:var(--bg-deep);
+  color:var(--text-primary);
+  border:1px solid var(--border-glow);
+  border-radius:var(--radius);
+  padding:8px 10px;
+  font-family:var(--font-mono);
+  font-size:13px;
+  margin:3px 0;
+  outline:none;
+  transition:border-color 0.18s,box-shadow 0.18s;
+  -webkit-appearance:none;appearance:none;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--accent-blue);
+  box-shadow:var(--glow-blue);
+}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%230af'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  padding-right:28px;
+}
+option{background:var(--bg-deep)}
+textarea{resize:vertical;min-height:55px}
+
+/* ======== COORD INPUT GROUP ======== */
+.coord-input-group{display:flex;gap:5px;margin:3px 0}
+.coord-input-group>div{display:flex;flex-direction:column}
+.c-label{font-size:9px;color:var(--text-dim);letter-spacing:0.5px;margin-bottom:2px;font-family:var(--font-mono)}
+
+/* ======== GPS INFO PANEL ======== */
+#gpsInfo{
+  display:none;
+  background:rgba(0,230,118,0.07);
+  border:1px solid rgba(0,230,118,0.25);
+  border-radius:var(--radius);
+  padding:10px 12px;
+  margin-top:6px;
+}
+#gpsInfo .gps-row{display:flex;justify-content:space-between;padding:3px 0}
+.gps-label{font-size:10px;letter-spacing:1px;color:var(--accent-green);font-family:var(--font-display);font-weight:700}
+.gps-value{font-family:var(--font-mono);font-size:14px;color:var(--text-bright)}
+
+/* ======== MOVING TRACK INFO ======== */
+#movingTrackInfo{
+  display:none;
+  background:rgba(0,229,255,0.07);
+  border:1px solid rgba(0,229,255,0.25);
+  border-radius:var(--radius);
+  padding:10px 12px;
+  margin-top:6px;
+}
+#movingTrackInfo .track-row{display:flex;justify-content:space-between;padding:3px 0}
+.track-label{font-size:10px;letter-spacing:1px;color:var(--accent-cyan);font-family:var(--font-display);font-weight:700}
+.track-value{font-family:var(--font-mono);font-size:14px;color:var(--text-bright)}
+
+/* ======== ROUTE SUMMARY ======== */
+#routeSummary{
+  font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);
+  line-height:1.7;margin-top:6px;padding:8px;
+  background:var(--bg-deep);border-radius:var(--radius);
+  border:1px solid var(--border-dim);min-height:18px;
+}
+#routeSummary b{color:var(--accent-amber)}
+
+/* ======== COORDS OUTPUT ======== */
+#coordsOut{
+  font-family:var(--font-mono);font-size:12px;color:var(--accent-cyan);
+  padding:6px 10px;background:var(--bg-deep);border-radius:var(--radius);
+  border:1px solid var(--border-dim);margin:4px 0;letter-spacing:0.5px;
+}
+
+/* ======== CREDIT ======== */
+#credit{
+  font-family:var(--font-display);font-size:9px;font-weight:700;
+  color:var(--text-dim);letter-spacing:1.5px;text-align:center;
+  padding:10px 14px 12px;
+}
+
+/* ======== SPEED INPUT ======== */
+#speedInput{width:80px !important;display:inline-block}
+.speed-row{display:flex;align-items:center;gap:8px;margin:4px 0}
+.speed-row label{font-size:10px;color:var(--text-dim);white-space:nowrap;font-family:var(--font-display);letter-spacing:0.5px}
+.speed-row #speedInput{width:70px !important;margin:0}
+
+/* ======== MAP OVERLAY BUTTONS ======== */
+#mapToggleBtn{
+  position:absolute;top:14px;left:14px;z-index:1000;
+  background:rgba(8,14,26,0.88);
+  border:1px solid var(--accent-green);color:var(--accent-green);
+  padding:10px 16px;font-family:var(--font-ui);font-size:13px;font-weight:600;
+  border-radius:var(--radius);cursor:pointer;box-shadow:var(--glow-green);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  transition:all 0.2s;letter-spacing:0.5px;
+}
+#mapToggleBtn:hover{background:rgba(0,230,118,0.15)}
+
+#measureBtn{
+  position:absolute;top:62px;left:14px;z-index:1000;
+  background:rgba(8,14,26,0.88);
+  border:1px solid rgba(255,0,255,0.6);color:#ff00ff;
+  padding:10px 16px;font-family:var(--font-ui);font-size:13px;font-weight:600;
+  border-radius:var(--radius);cursor:pointer;
+  box-shadow:0 0 12px rgba(255,0,255,0.3);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  transition:all 0.2s;letter-spacing:0.5px;
+}
+
+#stopMeasureBtn{
+  position:absolute;top:110px;left:14px;z-index:1000;
+  background:rgba(8,14,26,0.88);
+  border:1px solid rgba(255,23,68,0.6);color:var(--accent-red);
+  padding:10px 16px;font-family:var(--font-ui);font-size:13px;font-weight:600;
+  border-radius:var(--radius);cursor:pointer;box-shadow:var(--glow-red);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:none;letter-spacing:0.5px;
+}
+
+/* ======== MEASUREMENT DISPLAY ======== */
+#measurementInfo{
+  position:absolute;top:14px;left:50%;transform:translateX(-50%);
+  background:rgba(4,8,15,0.95);border:1px solid var(--border-glow);
+  color:white;padding:14px 20px;border-radius:10px;font-family:var(--font-mono);
+  font-size:13px;z-index:3000;display:none;
+  box-shadow:0 4px 30px rgba(0,0,0,0.7),var(--glow-blue);
+  pointer-events:none;min-width:260px;backdrop-filter:blur(12px);
+}
+#measurementInfo div{margin:6px 0;display:flex;justify-content:space-between;gap:20px}
+.measure-label{color:var(--accent-amber);font-size:10px;letter-spacing:1px;font-family:var(--font-display);font-weight:700}
+.measure-value{color:#fff;font-size:15px}
+
+/* ======== AREA VISIBILITY LIST ======== */
+.area-vis-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 8px;
+  border-bottom:1px solid var(--border-dim);
+  transition:background 0.15s;
+}
+.area-vis-item:last-child{border-bottom:none}
+.area-vis-item:hover{background:var(--bg-elevated)}
+.area-vis-name{
+  flex:1;font-size:12px;font-family:var(--font-ui);
+  color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.area-vis-type{font-size:10px;color:var(--text-dim);font-family:var(--font-mono);margin-right:4px}
+.area-vis-dot{font-size:14px;flex-shrink:0}
+/* Toggle switch */
+.vis-toggle{
+  position:relative;width:38px;height:20px;flex-shrink:0;
+}
+.vis-toggle input{opacity:0;width:0;height:0;position:absolute}
+.vis-slider{
+  position:absolute;inset:0;cursor:pointer;
+  background:rgba(255,23,68,0.25);border:1px solid rgba(255,23,68,0.5);
+  border-radius:20px;transition:all 0.25s;
+}
+.vis-slider::before{
+  content:'';position:absolute;
+  width:14px;height:14px;left:2px;top:2px;
+  background:#ff1744;border-radius:50%;transition:all 0.25s;
+}
+.vis-toggle input:checked+.vis-slider{
+  background:rgba(0,230,118,0.2);border-color:rgba(0,230,118,0.6);
+}
+.vis-toggle input:checked+.vis-slider::before{
+  transform:translateX(18px);background:var(--accent-green);
+  box-shadow:0 0 6px rgba(0,230,118,0.6);
+}
+#areaVisEmpty{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);text-align:center;padding:10px 0}
+
+/* ======== RESPONSIVE IPAD ======== */
+@media (max-width:1024px){
+  :root{--sidebar-w:100%}
+  #map{right:0;bottom:46%;top:0;transition:bottom 0.35s cubic-bezier(0.4,0,0.2,1),right 0s}
+  body.sidebar-collapsed #map{bottom:0}
+  #sidebar{
+    position:fixed;left:0;right:0;bottom:0;top:auto;
+    height:46%;width:100%;transform:translateY(0);
+    border-left:none;border-top:2px solid var(--border-glow);
+    transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  body.sidebar-collapsed #sidebar{transform:translateY(100%)}
+  #sidebarToggleBtn{
+    top:auto;
+    bottom:calc(46% - 1px);
+    right:10px;
+    left:auto;
+    width:64px;height:22px;
+    border-radius:8px 8px 0 0;
+    border-bottom:none;border-right:1px solid var(--border-glow);
+    transform:none;
+    writing-mode:horizontal-tb;
+  }
+  body.sidebar-collapsed #sidebarToggleBtn{bottom:0}
+  .toggle-arrow{writing-mode:horizontal-tb;transform:rotate(90deg)}
+  body.sidebar-collapsed .toggle-arrow{transform:rotate(-90deg)}
+}
+
+/* ======== PASSWORD SCREEN ======== */
+#passwordScreen{
+  position:fixed;left:0;top:0;right:0;bottom:0;
+  background:radial-gradient(ellipse at center,#0d1f3c 0%,#04080f 70%);
+  z-index:99999;display:flex;align-items:center;justify-content:center;
+}
+#passwordScreen::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(0,170,255,0.04) 40px),
+             repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(0,170,255,0.04) 40px);
+  pointer-events:none;
+}
+.password-box{
+  background:var(--bg-panel);border:1px solid var(--border-glow);
+  padding:40px 36px;border-radius:14px;
+  box-shadow:0 0 60px rgba(0,170,255,0.15),0 20px 60px rgba(0,0,0,0.6);
+  max-width:420px;width:90%;text-align:center;position:relative;
+}
+.password-box h2{
+  margin:0 0 6px;font-family:var(--font-display);font-size:18px;font-weight:900;
+  letter-spacing:3px;color:var(--accent-cyan);text-shadow:0 0 20px rgba(0,229,255,0.5);
+}
+.password-box p{color:var(--text-secondary);font-size:13px;margin-bottom:20px;font-family:var(--font-mono)}
+.password-box .btn{padding:12px 36px;font-size:14px;background:rgba(0,170,255,0.15);border-color:var(--accent-blue);color:var(--accent-cyan)}
+.password-box .error{color:var(--accent-red);font-size:12px;margin-top:10px;display:none;font-family:var(--font-mono)}
+.password-box .info{font-size:11px;color:var(--text-dim);margin-top:14px;font-family:var(--font-mono)}
+.lock-icon{font-size:40px;margin-bottom:16px;filter:drop-shadow(0 0 12px rgba(0,229,255,0.4))}
+
+/* ======== INSECURE OVERLAY ======== */
+#insecureOverlay{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:none;padding:24px}
+#insecureOverlay .box{background:var(--bg-panel);border:1px solid var(--border-glow);padding:20px;border-radius:10px;max-width:720px;margin:auto;color:var(--text-primary)}
+#insecureOverlay h2{color:var(--accent-amber);font-family:var(--font-display)}
+#insecureOverlay a{color:var(--accent-cyan)}
+
+/* ======== MODAL BASE ======== */
+.modal-content{
+  background:var(--bg-panel);border:1px solid var(--border-glow);padding:20px;
+  border-radius:12px;max-width:520px;margin:auto;max-height:92vh;overflow-y:auto;
+  box-shadow:0 0 40px rgba(0,0,0,0.8),0 0 20px rgba(0,170,255,0.08);
+}
+.modal-content h3{
+  margin:0 0 14px;font-family:var(--font-display);font-size:13px;font-weight:700;
+  letter-spacing:2px;color:var(--accent-cyan);text-shadow:0 0 12px rgba(0,229,255,0.3);
+}
+.modal-content label{
+  display:block;font-size:10px;letter-spacing:1px;color:var(--text-dim);
+  font-family:var(--font-display);font-weight:700;margin:8px 0 3px;text-transform:uppercase;
+}
+
+#tapConfirmModal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:10000;display:none;padding:16px;backdrop-filter:blur(4px)}
+#tapConfirmModal .modal-content{max-width:380px;margin:18% auto}
+#tapConfirmModal p{color:var(--text-secondary);font-size:13px}
+#tapCoords{font-family:var(--font-mono);font-size:13px;color:var(--accent-cyan);background:var(--bg-deep);padding:10px;border-radius:var(--radius);border:1px solid var(--border-dim)}
+
+#waypointListModal,#areaListModal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:10000;display:none;padding:16px;overflow:auto;backdrop-filter:blur(4px)}
+#waypointListModal .modal-content,#areaListModal .modal-content{max-width:580px}
+.modal-list-item{border-bottom:1px solid var(--border-dim);padding:10px 8px;margin-bottom:4px;transition:background 0.15s}
+.modal-list-item:hover{background:var(--bg-elevated)}
+.modal-list-item b{color:var(--text-bright);font-family:var(--font-ui)}
+.modal-list-item .small{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)}
+.info-text{font-size:11px;color:var(--text-dim);font-style:italic;margin-top:3px}
+.waypoint-actions{margin-top:6px}
+
+#areaModal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:10000;display:none;padding:16px;overflow:auto;backdrop-filter:blur(4px)}
+#areaModal .modal-content{max-width:500px}
+
+.area-type-selector{display:flex;gap:8px;margin:12px 0}
+.area-type-option{
+  flex:1;padding:12px;border:1px solid var(--border-glow);border-radius:8px;cursor:pointer;
+  text-align:center;background:var(--bg-elevated);transition:all 0.2s;color:var(--text-secondary);
+}
+.area-type-option:hover{border-color:var(--accent-blue);color:var(--text-primary)}
+.area-type-option.selected{border-color:var(--accent-cyan);background:rgba(0,229,255,0.1);color:var(--accent-cyan);box-shadow:var(--glow-blue)}
+.area-type-option strong{font-family:var(--font-display);font-size:12px;letter-spacing:0.5px}
+.area-type-option small{font-size:10px;color:var(--text-dim)}
+
+.color-selector,.circular-color-selector{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.color-option,.circular-color-option{width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);cursor:pointer;transition:all 0.2s}
+.color-option:hover,.circular-color-option:hover{transform:scale(1.12)}
+.color-option.selected,.circular-color-option.selected{border-color:#fff;border-width:3px;box-shadow:0 0 14px rgba(255,255,255,0.5)}
+
+.marker-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+.marker-type-option{border:1px solid var(--border-glow);padding:8px;text-align:center;cursor:pointer;border-radius:6px;transition:all 0.2s;background:var(--bg-elevated)}
+.marker-type-option:hover{background:var(--bg-deep);border-color:var(--accent-blue)}
+.marker-type-option.selected{border-color:var(--accent-cyan);background:rgba(0,229,255,0.1)}
+.marker-icon-preview{font-size:20px;margin-bottom:3px}
+.marker-type-label{font-size:10px;color:var(--text-dim);font-family:var(--font-mono)}
+
+#cornerInputs{margin:8px 0}
+.corner-input{margin-bottom:10px;background:var(--bg-deep);border:1px solid var(--border-dim);border-radius:6px;padding:8px}
+.corner-input label{font-size:9px;color:var(--accent-amber);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin-bottom:4px}
+
+#exportModal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:10000;display:none;padding:16px;overflow:auto;backdrop-filter:blur(4px)}
+#exportModal .modal-content{max-width:560px}
+.export-option{padding:10px 14px;margin:6px 0;border:1px solid var(--border-glow);border-radius:6px;cursor:pointer;transition:all 0.2s;background:var(--bg-elevated);color:var(--text-secondary)}
+.export-option strong{color:var(--text-primary)}
+.export-option small{color:var(--text-dim)}
+.export-option:hover{background:var(--bg-deep);border-color:var(--accent-blue);color:var(--text-primary)}
+.export-option.selected{background:rgba(0,170,255,0.1);border-color:var(--accent-cyan);color:var(--text-bright);box-shadow:var(--glow-blue)}
+.selection-section{margin-top:12px;padding:12px;background:var(--bg-deep);border-radius:6px;border:1px solid var(--border-dim);display:none}
+.selection-section h4{margin:0 0 10px;color:var(--text-secondary);font-size:11px;letter-spacing:1px;font-family:var(--font-display)}
+.checkbox-list{max-height:180px;overflow-y:auto;padding:6px;border:1px solid var(--border-dim);border-radius:4px}
+.checkbox-item{padding:6px 8px;margin:3px 0;cursor:pointer;border-radius:4px;transition:background 0.15s;color:var(--text-secondary);font-size:13px}
+.checkbox-item:hover{background:var(--bg-elevated)}
+.checkbox-item input{margin-right:8px;accent-color:var(--accent-cyan)}
+.select-all-btn{font-size:10px;padding:4px 8px}
+
+.custom-marker{background:transparent;border:none}
+
+.area-label{
+  background:rgba(0,0,0,0.7) !important;border:1px solid var(--border-glow) !important;
+  color:var(--accent-cyan) !important;font-family:var(--font-mono) !important;
+  font-size:11px !important;padding:3px 8px !important;
+}
+.area-label::before{display:none !important}
+
+#jsonArea{font-size:11px;min-height:50px}
+  /* ======== SAVED ROUTES MODAL ======== */
+#saveRouteModal,#savedRoutesModal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:10000;display:none;padding:16px;overflow:auto;backdrop-filter:blur(4px)}
+#saveRouteModal .modal-content,#savedRoutesModal .modal-content{max-width:580px}
+.saved-route-item{border:1px solid var(--border-glow);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--bg-elevated)}
+.saved-route-item .route-name{font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--accent-cyan);letter-spacing:1px;margin-bottom:6px}
+.saved-route-item .route-legs{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);line-height:1.8;margin-bottom:8px}
+.saved-route-item .route-total{font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);margin-bottom:8px}
+.btn-cyan{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.4);color:var(--accent-cyan)}
+.btn-cyan:hover{background:rgba(0,229,255,0.22);box-shadow:var(--glow-blue)}
+  /* Active map layer button highlight */
+.map-layer-btn.active-layer{
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  filter: brightness(1.3);
+}
+  /* ======== PRE-FLIGHT CACHE ======== */
+#cacheAreaModal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10000;display:none;padding:16px;overflow:auto;backdrop-filter:blur(4px)}
+#cacheAreaModal .modal-content{max-width:500px}
+
+.zoom-toggle-grid{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.zoom-btn{
+  padding:6px 10px;border:1px solid var(--border-glow);border-radius:4px;
+  cursor:pointer;background:var(--bg-elevated);color:var(--text-secondary);
+  font-family:var(--font-mono);font-size:12px;transition:all 0.18s;
+}
+.zoom-btn.active{
+  background:rgba(0,170,255,0.18);border-color:var(--accent-blue);
+  color:var(--accent-cyan);box-shadow:var(--glow-blue);
+}
+
+.layer-toggle-row{display:flex;gap:10px;margin:8px 0}
+.layer-btn{
+  flex:1;padding:9px;border:1px solid var(--border-glow);border-radius:6px;
+  cursor:pointer;background:var(--bg-elevated);color:var(--text-secondary);
+  font-family:var(--font-ui);font-size:12px;font-weight:600;text-align:center;
+  transition:all 0.18s;letter-spacing:0.5px;
+}
+.layer-btn.active{
+  background:rgba(0,230,118,0.12);border-color:rgba(0,230,118,0.5);
+  color:var(--accent-green);box-shadow:var(--glow-green);
+}
+
+#cacheEstimate{
+  background:var(--bg-deep);border:1px solid var(--border-dim);
+  border-radius:var(--radius);padding:10px 14px;margin:10px 0;
+  font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);
+  line-height:1.8;
+}
+
+#cacheProgressBar{
+  width:100%;height:14px;background:var(--bg-deep);
+  border:1px solid var(--border-glow);border-radius:7px;overflow:hidden;margin:8px 0;
+}
+#cacheProgressFill{
+  height:100%;width:0%;background:linear-gradient(90deg,#00aaff,#00e676);
+  border-radius:7px;transition:width 0.3s;
+}
+#cacheProgressText{
+  font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);
+  text-align:center;margin-bottom:8px;
+}
+
+/* Cached areas submenu */
+.submenu-panel{
+  margin-top:6px;padding:0;
+  border:1px solid var(--border-dim);border-radius:var(--radius);
+  background:var(--bg-deep);overflow:hidden;display:none;
+}
+.cached-area-item{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;border-bottom:1px solid var(--border-dim);
+  transition:background 0.15s;
+}
+.cached-area-item:last-child{border-bottom:none}
+.cached-area-item:hover{background:var(--bg-elevated)}
+.cached-area-name{flex:1;font-size:12px;font-family:var(--font-ui);color:var(--text-primary)}
+.cached-area-meta{font-size:10px;color:var(--text-dim);font-family:var(--font-mono)}
+.cached-area-empty{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);text-align:center;padding:12px 0}
+
+/* Map draw rectangle */
+.cache-draw-rect{
+  stroke:#00e676 !important;stroke-width:2 !important;stroke-dasharray:8,4 !important;
+  fill:rgba(0,230,118,0.08) !important;
+}
+</style>
+</head>
+<body>
+
+<!-- PASSWORD SCREEN -->
+<div id="passwordScreen">
+  <div class="password-box">
+    <div class="lock-icon">🔒</div>
+    <h2>SECURE ACCESS</h2>
+    <p>Enter password to access Air Navigation</p>
+    <input type="password" id="passwordInput" placeholder="Enter password"/>
+    <br><button class="btn" id="passwordSubmit">UNLOCK</button>
+    <div class="error" id="passwordError">❌ Incorrect password. Please try again.</div>
+    <div class="info">Password will be remembered on this browser</div>
+  </div>
+</div>
+
+<!-- MEASUREMENT OVERLAY -->
+<div id="measurementInfo">
+  <div><span class="measure-label">DISTANCE</span><span class="measure-value" id="measureDist">--</span></div>
+  <div><span class="measure-label">BRG A→B</span><span class="measure-value" id="measureBrgAB">--</span></div>
+  <div><span class="measure-label">BRG B→A</span><span class="measure-value" id="measureBrgBA">--</span></div>
+</div>
+
+<!-- MAP -->
+<div id="map">
+  <button id="mapToggleBtn">🛰️ SATELLITE</button>
+  <button id="measureBtn">📏 MEASURE</button>
+  <button id="stopMeasureBtn">⏹ STOP</button>
+</div>
+
+<!-- SIDEBAR COLLAPSE TOGGLE -->
+<button id="sidebarToggleBtn" title="Toggle panel">
+  <span class="toggle-arrow">◀</span>
+</button>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+
+  <!-- Header -->
+<div class="sidebar-header">
+    <h1>AIR NAV SYSTEM</h1>
+    <div class="subtitle">SLAP-GAP · SADMAN SAKIB AIKYO</div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <div style="flex:1;background:var(--bg-card);border:1px solid var(--border-glow);border-radius:var(--radius);padding:5px 8px;text-align:center">
+        <div style="font-family:var(--font-display);font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:2px">GMT / ZULU</div>
+        <div id="clockGMT" style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);letter-spacing:1px"></div>
+      </div>
+      <div style="flex:1;background:var(--bg-card);border:1px solid var(--border-glow);border-radius:var(--radius);padding:5px 8px;text-align:center">
+        <div style="font-family:var(--font-display);font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:2px">BD LOCAL</div>
+        <div id="clockBD" style="font-family:var(--font-mono);font-size:14px;color:var(--accent-cyan);letter-spacing:1px"></div>
+      </div>
+    </div>
+  </div>
+<!-- Map Layers -->
+  <div class="section">
+    <div class="section-label">Map Layer</div>
+    <div class="btn-row">
+      <a id="mapLayerNormal"    class="btn btn-green  map-layer-btn active-layer" style="flex:1;font-size:11px">🗺️ NORMAL</a>
+      <a id="mapLayerSatellite" class="btn btn-blue   map-layer-btn"              style="flex:1;font-size:11px">🛰️ SAT</a>
+    </div>
+    <div class="btn-row" style="margin-top:2px">
+      <a id="mapLayerTopo"      class="btn btn-amber  map-layer-btn"              style="flex:1;font-size:11px">⛰️ TOPO</a>
+      <a id="mapLayerDark"      class="btn btn-purple map-layer-btn"              style="flex:1;font-size:11px">🌑 DARK</a>
+      <a id="mapLayerEsriTopo"  class="btn btn-teal   map-layer-btn"              style="flex:1;font-size:11px">🗾 ESRI</a>
+    </div>
+  </div>
+  <!-- Jump to Coordinates -->
+  <div class="section">
+    <div class="section-label">Jump to Coordinates</div>
+    <div class="coord-input-group">
+      <div style="flex:1.4"><div class="c-label">LAT DEG</div><input id="latDeg" type="number" placeholder="23"/></div>
+      <div style="flex:1.6"><div class="c-label">LAT MIN</div><input id="latMin" type="number" step="0.001" placeholder="41.100"/></div>
+      <div style="flex:0.6"><div class="c-label">N/S</div><select id="latDir"><option value="N">N</option><option value="S">S</option></select></div>
+    </div>
+    <div class="coord-input-group">
+      <div style="flex:1.4"><div class="c-label">LON DEG</div><input id="lonDeg" type="number" placeholder="90"/></div>
+      <div style="flex:1.6"><div class="c-label">LON MIN</div><input id="lonMin" type="number" step="0.001" placeholder="21.378"/></div>
+      <div style="flex:0.6"><div class="c-label">E/W</div><select id="lonDir"><option value="E">E</option><option value="W">W</option></select></div>
+    </div>
+    <a id="goBtn" class="btn btn-blue full">🎯 GO / ADD WAYPOINT</a>
+  </div>
+
+  <!-- Waypoints -->
+  <div class="section">
+    <div class="section-label">
+      Waypoints
+      <a id="showWaypointListBtn" class="btn small btn-blue" style="margin-left:auto">📋 LIST</a>
+    </div>
+    <div class="speed-row">
+      <label>SPEED (KTS):</label>
+      <input id="speedInput" type="text" placeholder="kn"/>
+    </div>
+    <div class="btn-row" style="margin-top:6px">
+      <a id="routeBtn" class="btn btn-amber">⛓ ROUTE</a>
+      <a id="clearRouteBtn" class="btn">✖ CLEAR ROUTE</a>
+   </div>
+    <div class="btn-row" style="margin-top:4px">
+      <a id="saveRouteBtn" class="btn btn-green" style="opacity:0.4;pointer-events:none">💾 SAVE ROUTE</a>
+      <a id="showSavedRoutesBtn" class="btn btn-cyan">📂 SAVED ROUTES</a>
+    </div>
+    <div id="routeSummary"></div>
+  </div>
+
+  <!-- Flying Modes -->
+  <div class="section">
+    <div class="section-label">Flying / Direct-To Modes</div>
+    <div class="btn-row">
+      <a id="startFlyBtn" class="btn btn-green">🚁 FLY ON</a>
+      <a id="stopFlyBtn" class="btn btn-red">⏹ FLY OFF</a>
+    </div>
+    <div class="btn-row">
+      <a id="startDirectBtn" class="btn btn-purple">➤ DIRECT-TO</a>
+      <a id="stopDirectBtn" class="btn btn-red">⏹ STOP</a>
+    </div>
+    <a id="recenterBtn" class="btn btn-green full">🎯 RE-CENTER MAP</a>
+    <div id="gpsInfo">
+      <div class="gps-row"><span class="gps-label">GPS SPEED</span><span class="gps-value" id="gpsSpeed">-- kts</span></div>
+      <div class="gps-row"><span class="gps-label">COURSE OG</span><span class="gps-value" id="gpsCourse">--°</span></div>
+    </div>
+  </div>
+
+  <!-- Moving Track -->
+  <div class="section">
+    <div class="section-label">Moving Track <span style="font-size:9px;color:var(--text-dim)">(FLYING MODE)</span></div>
+    <div class="btn-row">
+      <a id="movingTrackOnBtn" class="btn btn-green">📡 TRACK ON</a>
+      <a id="movingTrackOffBtn" class="btn" style="background:rgba(255,87,34,0.12);border-color:rgba(255,87,34,0.4);color:#ff5722">📡 TRACK OFF</a>
+    </div>
+    <div id="movingTrackInfo">
+      <div class="track-row"><span class="track-label">20-MIN TRACK</span><span class="track-value" id="trackDistance">-- NM</span></div>
+      <div class="track-row"><span class="track-label">COURSE</span><span class="track-value" id="trackCourse">--°</span></div>
+      <div class="track-row"><span class="track-label">SPEED</span><span class="track-value" id="trackSpeed">-- kts</span></div>
+    </div>
+  </div>
+
+  <!-- Direct-To Select -->
+  <div class="section">
+    <div class="section-label">Direct-To Waypoint</div>
+    <select id="directSelect"><option value="">Select Waypoint</option></select>
+  </div>
+
+  <!-- Area Management -->
+  <div class="section">
+    <div class="section-label">
+      Area Management
+      <a id="showAreaListBtn" class="btn small btn-blue" style="margin-left:auto">📋 LIST</a>
+    </div>
+    <a id="createAreaBtn" class="btn btn-purple full">✚ CREATE AREA</a>
+    <div style="margin-top:8px">
+      <div class="c-label" style="margin-bottom:4px">EDIT AREA</div>
+      <select id="editAreaSelect"><option value="">Select Area to Edit</option></select>
+      <a id="editAreaBtn" class="btn btn-amber full" style="margin-top:4px">✏️ EDIT SELECTED</a>
+    </div>
+    <div style="margin-top:8px">
+      <div class="c-label" style="margin-bottom:4px">DELETE AREA</div>
+      <select id="deleteAreaSelect"><option value="">Select Area to Delete</option></select>
+      <a id="deleteAreaBtn" class="btn btn-red full" style="margin-top:4px">🗑 DELETE SELECTED</a>
+    </div>
+  </div>
+
+<!-- Area Visibility (Show / Hide on map) -->
+  <div class="section">
+    <div class="section-label" id="areaVisToggle" style="cursor:pointer;user-select:none">
+      Show / Hide Areas
+      <span id="areaVisArrow" style="margin-left:auto;color:var(--accent-cyan);font-size:11px">▶ EXPAND</span>
+    </div>
+    <div id="areaVisPanel" style="display:none;margin-top:4px">
+      <div id="areaVisList">
+        <div id="areaVisEmpty">No areas saved yet</div>
+      </div>
+    </div>
+  </div>
+<!-- Pre-flight Cache -->
+  <div class="section">
+    <div class="section-label" id="cacheMenuToggle" style="cursor:pointer;user-select:none">
+      Pre-flight Cache
+      <span id="cacheMenuArrow" style="margin-left:auto;color:var(--accent-green);font-size:11px">▶ EXPAND</span>
+    </div>
+    <div id="cacheMenuPanel" style="display:none">
+      <a id="startCacheDrawBtn" class="btn btn-green full" style="margin-top:4px">📦 CACHE AREA</a>
+      <div style="margin-top:8px">
+        <div class="section-label" style="cursor:pointer;user-select:none" id="cachedAreasToggle">
+          Cached Areas
+          <span id="cachedAreasArrow" style="margin-left:auto;color:var(--accent-cyan);font-size:11px">▶ SHOW</span>
+        </div>
+        <div class="submenu-panel" id="cachedAreasPanel">
+          <div id="cachedAreasList"><div class="cached-area-empty">No cached areas yet</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Import / Export -->
+  <div class="section">
+    <div class="section-label">Import / Export</div>
+    <div class="btn-row">
+      <a id="saveBtn" class="btn btn-green">💾 SAVE</a>
+      <a id="exportBtn" class="btn">📤 EXPORT</a>
+      <a id="importBtn" class="btn btn-amber">📥 IMPORT</a>
+    </div>
+    <textarea id="jsonArea" rows="3" placeholder="Paste JSON here to import..."></textarea>
+  </div>
+
+  <!-- Coords / Status -->
+  <div class="section">
+    <div class="section-label">Position</div>
+    <div id="coordsOut">None</div>
+    <div style="font-size:10px;color:var(--text-dim);margin-top:4px;font-family:var(--font-mono)">Tap map to capture coordinates</div>
+  </div>
+
+ <!-- PRINT FLIGHT BRIEF -->
+  <div class="section" style="padding-bottom:14px">
+    <a id="printBriefBtn" class="btn full" style="background:rgba(255,171,0,0.18);border-color:rgba(255,171,0,0.7);color:#ffab00;font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:2px;padding:12px;box-shadow:0 0 14px rgba(255,171,0,0.2)">🖨️ PRINT BRIEF</a>
+  </div>
+
+  <div id="credit">SLAP-GAP · LT CDR SADMAN · P NO 3223</div>
+
+</div><!-- /sidebar -->
+
+<!-- TAP CONFIRM MODAL -->
+<div id="tapConfirmModal">
+  <div class="modal-content">
+    <h3>📍 LOCATION TAPPED</h3>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Coordinates:</p>
+    <div id="tapCoords"></div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-top:12px">Save this as a waypoint?</p>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-green" id="confirmWaypointBtn" style="flex:1">✅ YES, CREATE</button>
+      <button class="btn btn-red" id="cancelWaypointBtn" style="flex:1">✖ CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAYPOINT LIST MODAL -->
+<div id="waypointListModal">
+  <div class="modal-content">
+    <h3>📍 WAYPOINTS LIST <button class="btn small btn-red" id="closeWaypointListBtn" style="float:right">CLOSE</button></h3>
+    <div id="waypointListContent" style="max-height:480px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- AREA LIST MODAL -->
+<div id="areaListModal">
+  <div class="modal-content">
+    <h3>🗺️ AREAS LIST <button class="btn small btn-red" id="closeAreaListBtn" style="float:right">CLOSE</button></h3>
+    <div id="areaListContent" style="max-height:480px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- AREA MODAL -->
+<div id="areaModal">
+  <div class="modal-content">
+    <h3 id="modalTitle">CREATE NEW AREA</h3>
+    <div class="area-type-selector" id="areaTypeSelector">
+      <div class="area-type-option selected" data-type="polygon">
+        <div style="font-size:22px">📐</div>
+        <div><strong>POLYGON</strong></div><small>Define corners</small>
+      </div>
+      <div class="area-type-option" data-type="circular">
+        <div style="font-size:22px">⭕</div>
+        <div><strong>CIRCULAR</strong></div><small>Around waypoint</small>
+      </div>
+    </div>
+    <!-- Polygon Section -->
+    <div id="polygonSection">
+      <label>Number of corners:</label>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <input type="number" id="numCorners" min="3" placeholder="e.g. 4" style="flex:1"/>
+        <a id="setCornerBtn" class="btn btn-blue" style="margin:0">SET CORNERS</a>
+      </div>
+      <div id="cornerInputs"></div>
+      <div id="nameSection" style="display:none">
+        <label>Area Name:</label>
+        <input type="text" id="areaName" placeholder="Enter area name"/>
+        <label>Area Color:</label>
+        <div class="color-selector">
+          <div class="color-option selected" data-color="#dc3545" style="background:#dc3545" title="Red"></div>
+          <div class="color-option" data-color="#0d6efd" style="background:#0d6efd" title="Blue"></div>
+          <div class="color-option" data-color="#8b45c1" style="background:#8b45c1" title="Purple"></div>
+          <div class="color-option" data-color="#ffc107" style="background:#ffc107" title="Yellow"></div>
+        </div>
+        <label>Info / Notes:</label>
+        <textarea id="areaInfo" rows="3" placeholder="Enter information about this area..."></textarea>
+        <div class="btn-row" style="margin-top:8px">
+          <a id="saveAreaBtn" class="btn btn-green" style="flex:1">💾 SAVE AREA</a>
+          <a id="cancelAreaBtn" class="btn btn-red" style="flex:1">✖ CANCEL</a>
+        </div>
+      </div>
+    </div>
+    <!-- Circular Section -->
+    <div id="circularSection" style="display:none">
+      <label>Select Waypoint:</label>
+      <select id="circularWaypointSelect"><option value="">Choose waypoint as center</option></select>
+      <label>Diameter (Nautical Miles):</label>
+      <input type="number" id="circularDiameter" step="0.1" min="0.1" placeholder="e.g. 5.0"/>
+      <label>Area Name:</label>
+      <input type="text" id="circularAreaName" placeholder="Enter area name"/>
+      <label>Circle Color:</label>
+      <div class="circular-color-selector">
+        <div class="circular-color-option selected" data-color="#ff0000" style="background:#ff0000" title="Red"></div>
+        <div class="circular-color-option" data-color="#00ff00" style="background:#00ff00" title="Green"></div>
+        <div class="circular-color-option" data-color="#0000ff" style="background:#0000ff" title="Blue"></div>
+        <div class="circular-color-option" data-color="#ffff00" style="background:#ffff00" title="Yellow"></div>
+        <div class="circular-color-option" data-color="#ff00ff" style="background:#ff00ff" title="Magenta"></div>
+      </div>
+      <label>Info / Notes:</label>
+      <textarea id="circularAreaInfo" rows="3" placeholder="Enter information about this area..."></textarea>
+      <div class="btn-row" style="margin-top:8px">
+        <a id="saveCircularAreaBtn" class="btn btn-green" style="flex:1">💾 SAVE CIRCULAR</a>
+        <a id="cancelCircularAreaBtn" class="btn btn-red" style="flex:1">✖ CANCEL</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div id="exportModal">
+  <div class="modal-content">
+    <h3>📤 EXPORT OPTIONS</h3>
+    <p style="font-size:12px;color:var(--text-dim)">Choose what to export:</p>
+    <div class="export-option" data-type="all"><strong>📦 Export All</strong><br><small>All waypoints and areas</small></div>
+    <div class="export-option" data-type="waypoints-only"><strong>📍 Export All Waypoints Only</strong><br><small>All waypoints (no areas)</small></div>
+    <div class="export-option" data-type="areas-only"><strong>🗺️ Export All Areas Only</strong><br><small>All areas (no waypoints)</small></div>
+    <div class="export-option" data-type="selected-waypoints"><strong>✅ Export Selected Waypoints</strong><br><small>Choose specific waypoints</small></div>
+    <div class="export-option" data-type="selected-areas"><strong>✅ Export Selected Areas</strong><br><small>Choose specific areas</small></div>
+    <div class="export-option" data-type="custom"><strong>🎯 Custom Selection</strong><br><small>Mix waypoints and areas</small></div>
+    <div class="selection-section" id="waypointSelection">
+      <h4>SELECT WAYPOINTS</h4>
+      <button class="btn small btn-blue select-all-btn" id="selectAllWaypoints">Select All</button>
+      <button class="btn small btn-red select-all-btn" id="deselectAllWaypoints">Deselect All</button>
+      <div class="checkbox-list" id="waypointCheckboxList"></div>
+    </div>
+    <div class="selection-section" id="areaSelection">
+      <h4>SELECT AREAS</h4>
+      <button class="btn small btn-blue select-all-btn" id="selectAllAreas">Select All</button>
+      <button class="btn small btn-red select-all-btn" id="deselectAllAreas">Deselect All</button>
+      <div class="checkbox-list" id="areaCheckboxList"></div>
+    </div>
+    <div class="btn-row" style="margin-top:16px;justify-content:center">
+      <button class="btn btn-green" id="confirmExportBtn" style="padding:10px 28px">📤 EXPORT</button>
+      <button class="btn btn-red" id="cancelExportBtn" style="padding:10px 28px">CANCEL</button>
+    </div>
+  </div>
+</div>
+<!-- FLIGHT BRIEF MODAL -->
+<div id="briefModal" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10000;display:none;padding:16px;overflow:auto;backdrop-filter:blur(4px)">
+  <div class="modal-content" style="max-width:640px;font-family:var(--font-ui)">
+    <h3>🖨️ FLIGHT BRIEFING SHEET</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+
+      <div><label>CALLSIGN</label><input type="text" id="bf_callsign" placeholder="e.g. TIGER 01"/></div>
+      <div><label>AIRCRAFT</label><input type="text" id="bf_aircraft" placeholder="e.g. AW-139"/></div>
+      <div><label>PILOT</label><input type="text" id="bf_pilot" placeholder="Name / Rank"/></div>
+      <div><label>CO-PILOT</label><input type="text" id="bf_copilot" placeholder="Name / Rank"/></div>
+      <div><label>REAR CREW</label><input type="text" id="bf_rearcrew" placeholder="Name / Rank"/></div>
+      <div><label>MISSION</label><input type="text" id="bf_mission" placeholder="e.g. SAR / MEDEVAC"/></div>
+      <div><label>ETD (LOCAL)</label><input type="text" id="bf_etd" placeholder="e.g. 0830L"/></div>
+      <div><label>DURATION (MIN)</label><input type="number" id="bf_duration" placeholder="e.g. 90"/></div>
+      <div><label>AUW (KG)</label><input type="text" id="bf_auw" placeholder="e.g. 6200"/></div>
+      <div><label>ALTITUDE (FT)</label><input type="text" id="bf_altitude" placeholder="e.g. 1500 ft MSL"/></div>
+      <div><label>FUEL TAKEN (LTR)</label><input type="number" id="bf_fuel" placeholder="e.g. 800" oninput="calcEndurance()"/></div>
+      <div><label>FUEL CONS RATE (LTR/HR)</label><input type="number" id="bf_fuelrate" placeholder="e.g. 350" oninput="calcEndurance()"/></div>
+      <div><label>ENDURANCE</label><input type="text" id="bf_endurance" placeholder="Auto-calculated" readonly style="background:rgba(0,230,118,0.07);border-color:rgba(0,230,118,0.3);color:var(--accent-green)"/></div>
+      <div><label>FREQUENCIES</label><input type="text" id="bf_freq" placeholder="e.g. 122.8 / 243.0"/></div>
+
+    </div>
+
+    <div style="margin-top:8px"><label>WEATHER</label></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label>AIRFIELD STATE</label><input type="text" id="bf_wx_airfield" placeholder="e.g. OPEN / CLOSED"/></div>
+      <div><label>DEP VISIBILITY</label><input type="text" id="bf_wx_depvis" placeholder="e.g. 5000M"/></div>
+      <div><label>DEST VISIBILITY</label><input type="text" id="bf_wx_destvis" placeholder="e.g. 8KM"/></div>
+      <div><label>CLOUD</label><input type="text" id="bf_wx_cloud" placeholder="e.g. FEW 2500ft"/></div>
+      <div><label>WIND</label><input type="text" id="bf_wx_wind" placeholder="e.g. 270/15KT"/></div>
+      <div><label>WEATHER WARNING</label><input type="text" id="bf_wx_warn" placeholder="e.g. THUNDERSTORM AREA"/></div>
+    </div>
+
+    <div style="margin-top:8px"><label>NOTAM</label><textarea id="bf_notam" rows="3" placeholder="Enter relevant NOTAMs..."></textarea></div>
+    <div style="margin-top:4px"><label>SPECIAL NOTE</label><textarea id="bf_special" rows="2" placeholder="Any special instructions..."></textarea></div>
+
+    <div class="btn-row" style="margin-top:16px;justify-content:center">
+      <button class="btn btn-amber" id="doPrintBriefBtn" style="padding:10px 28px;font-size:13px;letter-spacing:1px">🖨️ PRINT / SAVE PDF</button>
+      <button class="btn btn-red" id="closeBriefBtn" style="padding:10px 28px">✖ CLOSE</button>
+    </div>
+  </div>
+</div>
+  <!-- SAVE ROUTE NAME MODAL -->
+<div id="saveRouteModal">
+  <div class="modal-content">
+    <h3>💾 SAVE ROUTE</h3>
+    <p style="font-size:12px;color:var(--text-dim)">Enter a name for this route:</p>
+    <input type="text" id="saveRouteNameInput" placeholder="e.g. HARIPUR TO CHITTAGONG" style="margin-bottom:12px"/>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn btn-green" id="confirmSaveRouteBtn" style="padding:10px 24px">💾 SAVE</button>
+      <button class="btn btn-red" id="cancelSaveRouteBtn" style="padding:10px 24px">✖ CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- SAVED ROUTES LIST MODAL -->
+<div id="savedRoutesModal">
+  <div class="modal-content">
+    <h3>📂 SAVED ROUTES <button class="btn small btn-red" id="closeSavedRoutesBtn" style="float:right">CLOSE</button></h3>
+    <div id="savedRoutesContent" style="max-height:500px;overflow-y:auto;margin-top:8px"></div>
+  </div>
+</div>
+  <!-- PRE-FLIGHT CACHE MODAL -->
+<div id="cacheAreaModal">
+  <div class="modal-content">
+    <h3>📦 PRE-FLIGHT TILE CACHE</h3>
+
+    <div id="cacheStep1">
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">
+        Draw a rectangle on the map over your operating area. Select zoom levels and map layers, then download all tiles for offline use.
+      </p>
+      <a id="drawCacheRectBtn" class="btn btn-green full">✏️ DRAW AREA ON MAP</a>
+      <p id="cacheDrawHint" style="display:none;font-size:11px;color:var(--accent-amber);text-align:center;margin-top:8px;font-family:var(--font-mono)">
+        ↙ Tap & drag on the map to draw your cache area
+      </p>
+
+      <div style="margin-top:14px">
+        <label style="font-size:10px;letter-spacing:1px;color:var(--text-dim);font-family:var(--font-display);font-weight:700;text-transform:uppercase">Zoom Levels</label>
+        <div class="zoom-toggle-grid" id="zoomToggleGrid"></div>
+      </div>
+
+      <div style="margin-top:10px">
+        <label style="font-size:10px;letter-spacing:1px;color:var(--text-dim);font-family:var(--font-display);font-weight:700;text-transform:uppercase">Map Layers</label>
+        <div class="layer-toggle-row">
+          <div class="layer-btn active" id="layerBtnOSM" onclick="toggleCacheLayer('osm')">🗺️ Normal (OSM)</div>
+          <div class="layer-btn active" id="layerBtnSat" onclick="toggleCacheLayer('sat')">🛰️ Satellite</div>
+        </div>
+      </div>
+
+      <div id="cacheEstimate">Select an area and zoom levels to see estimate</div>
+
+      <div style="margin-top:4px">
+        <label style="font-size:10px;letter-spacing:1px;color:var(--text-dim);font-family:var(--font-display);font-weight:700;text-transform:uppercase">Area Name</label>
+        <input type="text" id="cacheAreaNameInput" placeholder="e.g. SORTIE ALPHA — HARIPUR" style="margin-top:4px"/>
+      </div>
+
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-green" id="startDownloadBtn" style="flex:2;opacity:0.4;pointer-events:none">⬇ DOWNLOAD NOW</button>
+        <button class="btn btn-red" id="cancelCacheModalBtn" style="flex:1">✖ CANCEL</button>
+      </div>
+    </div>
+
+    <div id="cacheStep2" style="display:none">
+      <p style="font-size:12px;color:var(--text-secondary);text-align:center;margin-bottom:10px" id="cacheStatusText">Preparing download...</p>
+      <div id="cacheProgressBar"><div id="cacheProgressFill"></div></div>
+      <div id="cacheProgressText">0 / 0 tiles</div>
+      <button class="btn btn-red full" id="abortCacheBtn" style="margin-top:8px">⏹ ABORT</button>
+    </div>
+
+    <div id="cacheStep3" style="display:none;text-align:center">
+      <div style="font-size:36px;margin:10px 0">✅</div>
+      <p style="color:var(--accent-green);font-family:var(--font-display);letter-spacing:1px;font-size:14px">AREA CACHED</p>
+      <p id="cacheDoneText" style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin:8px 0"></p>
+      <button class="btn btn-blue full" id="closeCacheDoneBtn" style="margin-top:12px">CLOSE</button>
+    </div>
+  </div>
+</div>
+<!-- INSECURE OVERLAY -->
+<div id="insecureOverlay" aria-hidden="true">
+  <div class="box">
+    <h2>⚠️ Security / Location Notice</h2>
+    <p>This page requires secure origin (HTTPS or localhost) for the device's GPS to work properly.</p>
+    <p><b>Recommended:</b> Use your GitHub Pages HTTPS link.</p>
+    <p><a id="hideOverlay" class="btn btn-green small">I understand - continue anyway</a></p>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ====================================================
+   AUTH
+==================================================== */
+const CORRECT_PASSWORD='Lilymaafroz245',PASSWORD_KEY='air_nav_authenticated';
+
+function checkAuthentication(){
+  localStorage.getItem(PASSWORD_KEY)==='true'
+    ?(document.getElementById('passwordScreen').style.display='none',initializeApp())
+    :document.getElementById('passwordScreen').style.display='flex';
+}
+document.getElementById('passwordSubmit').onclick=function(){
+  if(document.getElementById('passwordInput').value===CORRECT_PASSWORD){
+    localStorage.setItem(PASSWORD_KEY,'true');
+    document.getElementById('passwordScreen').style.display='none';
+    document.getElementById('passwordError').style.display='none';
+    initializeApp();
+  }else{
+    document.getElementById('passwordError').style.display='block';
+    document.getElementById('passwordInput').value='';
+    document.getElementById('passwordInput').focus();
+  }
+};
+document.getElementById('passwordInput').addEventListener('keypress',function(e){
+  if('Enter'===e.key)document.getElementById('passwordSubmit').click();
+});
+
+/* ====================================================
+   SIDEBAR COLLAPSE
+==================================================== */
+document.getElementById('sidebarToggleBtn').onclick=function(){
+  document.body.classList.toggle('sidebar-collapsed');
+  // Invalidate map size after animation
+  setTimeout(()=>{ if(window._mapInstance)window._mapInstance.invalidateSize(); },370);
+};
+
+/* ====================================================
+   COORD HELPERS
+==================================================== */
+function decimalToDMS(decimal,isLat){
+  const absolute=Math.abs(decimal),degrees=Math.floor(absolute),minutes=(absolute-degrees)*60;
+  return{degrees,minutes,direction:isLat?decimal>=0?'N':'S':decimal>=0?'E':'W'};
+}
+function DMSToDecimal(degrees,minutes,direction){
+  let decimal=parseFloat(degrees)+parseFloat(minutes)/60;
+  if('S'===direction||'W'===direction)decimal=-decimal;
+  return decimal;
+}
+function formatDMS(decimal,isLat){
+  const dms=decimalToDMS(decimal,isLat);
+  return`${dms.degrees}° ${dms.minutes.toFixed(3)}' ${dms.direction}`;
+}
+
+/* ====================================================
+   MARKER TYPES
+==================================================== */
+const MARKER_TYPES={
+  default:{color:'#ff0000',shape:'circle',label:'Default'},
+  helipad:{color:'#000080',shape:'H',label:'Helipad'},
+  star:{color:'#FFD700',shape:'star',label:'Important'},
+  diamond:{color:'#C0C0C0',shape:'diamond',label:'Checkpoint'},
+  triangle:{color:'#FFFFFF',shape:'triangle',label:'Marker'},
+  airport:{color:'#00ff00',shape:'square',label:'Airport'}
+};
+
+function createMarkerIcon(type='default'){
+  const markerType=MARKER_TYPES[type]||MARKER_TYPES.default;
+  if('circle'===markerType.shape)
+    return L.circleMarker([0,0],{radius:5,color:markerType.color,fillColor:markerType.color,fillOpacity:.9,weight:2});
+  let svgIcon='';const color=markerType.color;
+  switch(markerType.shape){
+    case'H':svgIcon=`<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="16" height="16" fill="${color}" stroke="#000" stroke-width="1.5"/><text x="10" y="14" font-size="12" font-weight="bold" text-anchor="middle" fill="#FFFFFF">H</text></svg>`;break;
+    case'star':svgIcon=`<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><polygon points="10,2 12,8 18,8 13,12 15,18 10,14 5,18 7,12 2,8 8,8" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;break;
+    case'diamond':svgIcon=`<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><polygon points="10,2 18,10 10,18 2,10" fill="${color}" stroke="#000" stroke-width="1.5"/></svg>`;break;
+    case'triangle':svgIcon=`<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><polygon points="10,2 18,17 2,17" fill="${color}" stroke="#000" stroke-width="1.5"/></svg>`;break;
+    case'square':svgIcon=`<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="14" height="14" fill="${color}" stroke="#000" stroke-width="1.5"/></svg>`;break;
+  }
+  return L.divIcon({html:svgIcon,className:'custom-marker',iconSize:[20,20],iconAnchor:[10,10]});
+}
+
+function createHelicopterIcon(heading){
+  const rotation=heading||0;
+  const svgIcon=`<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" style="transform:rotate(${rotation}deg)">
+    <g transform="translate(16,16)">
+      <ellipse cx="0" cy="0" rx="12" ry="6" fill="#a52a2a" opacity="0.3"/>
+      <rect x="-1.5" y="-8" width="3" height="16" fill="#2c1810" rx="1"/>
+      <rect x="-10" y="-2" width="20" height="2" fill="#2c1810" rx="1"/>
+      <circle cx="0" cy="0" r="3" fill="#8b0000"/>
+      <line x1="-15" y1="-10" x2="15" y2="-10" stroke="#4a4a4a" stroke-width="1.5"/>
+      <path d="M 0,-8 L 3,-12 L 0,-11 L -3,-12 Z" fill="#2c1810"/>
+    </g>
+  </svg>`;
+  return L.divIcon({html:svgIcon,className:'custom-marker',iconSize:[32,32],iconAnchor:[16,16]});
+}
+
+/* ====================================================
+   MAIN APP
+==================================================== */
+function initializeApp(){
+  const insecureOverlay=document.getElementById('insecureOverlay');
+  function checkSecureContextAndWarn(){
+    const isLocalhost='localhost'===location.hostname||'127.0.0.1'===location.hostname;
+    if(!('https:'===location.protocol||isLocalhost)){
+      insecureOverlay.style.display='block';insecureOverlay.setAttribute('aria-hidden','false');
+    }
+  }
+  document.getElementById('hideOverlay').onclick=()=>{
+    insecureOverlay.style.display='none';insecureOverlay.setAttribute('aria-hidden','true');
+  };
+  checkSecureContextAndWarn();
+
+  /* -- MAP INIT -- */
+  const map=L.map('map',{zoomControl:true,dragging:true,touchZoom:true,doubleClickZoom:true,scrollWheelZoom:true}).setView([23.685,90.3563],7);
+  window._mapInstance=map; // for sidebar toggle invalidateSize
+
+// --- All tile layers ---
+  const normalLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom:18, attribution:'&copy; OpenStreetMap contributors' }
+  ).addTo(map);
+
+  const satelliteLayer = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom:18, attribution:'&copy; Esri' }
+  );
+
+  const topoLayer = L.tileLayer(
+    'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    { maxZoom:17, attribution:'&copy; OpenTopoMap' }
+  );
+
+  const darkLayer = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    { maxZoom:19, subdomains:'abcd', attribution:'&copy; CartoDB' }
+  );
+
+  const esriTopoLayer = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom:18, attribution:'&copy; Esri' }
+  );
+
+  // Map of all layers keyed by id
+  const ALL_LAYERS = {
+    normal:    normalLayer,
+    satellite: satelliteLayer,
+    topo:      topoLayer,
+    dark:      darkLayer,
+    esritopo:  esriTopoLayer
+  };
+
+  let currentLayer = 'normal';
+
+  function switchLayer(newKey){
+    if(newKey === currentLayer) return;
+    map.removeLayer(ALL_LAYERS[currentLayer]);
+    map.addLayer(ALL_LAYERS[newKey]);
+    currentLayer = newKey;
+
+    // Update map overlay toggle button label
+    const mapToggleBtn = document.getElementById('mapToggleBtn');
+    if(newKey === 'satellite'){
+      mapToggleBtn.innerHTML='🗺️ NORMAL';
+      mapToggleBtn.style.borderColor='#0af';
+      mapToggleBtn.style.color='#0af';
+      mapToggleBtn.style.boxShadow='0 0 12px rgba(0,170,255,0.45)';
+    } else {
+      mapToggleBtn.innerHTML='🛰️ SATELLITE';
+      mapToggleBtn.style.borderColor='var(--accent-green)';
+      mapToggleBtn.style.color='var(--accent-green)';
+      mapToggleBtn.style.boxShadow='var(--glow-green)';
+    }
+
+    // Highlight the active sidebar button
+    document.querySelectorAll('.map-layer-btn').forEach(b => b.classList.remove('active-layer'));
+    const activeBtn = document.getElementById('mapLayer' +
+      newKey.charAt(0).toUpperCase() + newKey.slice(1));
+    if(activeBtn) activeBtn.classList.add('active-layer');
+  }
+
+  // Sidebar button handlers
+  document.getElementById('mapLayerNormal')   .onclick = () => switchLayer('normal');
+  document.getElementById('mapLayerSatellite').onclick = () => switchLayer('satellite');
+  document.getElementById('mapLayerTopo')     .onclick = () => switchLayer('topo');
+  document.getElementById('mapLayerDark')     .onclick = () => switchLayer('dark');
+  document.getElementById('mapLayerEsriTopo') .onclick = () => switchLayer('esritopo');
+
+  // Keep the existing map overlay toggle button working (top-left of map)
+  const mapToggleBtn = document.getElementById('mapToggleBtn');
+  mapToggleBtn.onclick = function(e){
+    e.stopPropagation();
+    if(currentLayer === 'satellite'){
+      switchLayer('normal');
+    } else {
+      switchLayer('satellite');
+    }
+  };
+
+  /* -- STATE -- */
+  let waypoints=[],markers={},selected=[],routeLayer=null,checkpointMarkers=[],
+      flyMarker=null,flyWatchId=null,directLayer=null,directTargetId=null,
+      lastSpeedGPS=0,lastCourseGPS=0,areas=[],areaPolygons={},
+      areaVisible={},  // tracks which areas are shown on map
+      editingAreaId=null,
+      measurementLine=null,measureStartMarker=null,measureEndMarker=null,measureActive=false,
+      movingTrackLine=null,movingTrackActive=false,movingTrackUpdateInterval=null,
+      pendingTapLocation=null;
+
+  /* -- DOM REFS -- */
+  const coordsOut=document.getElementById('coordsOut'),
+        routeSummaryDiv=document.getElementById('routeSummary'),
+        directSelect=document.getElementById('directSelect'),
+        recenterBtn=document.getElementById('recenterBtn'),
+        editAreaSelect=document.getElementById('editAreaSelect'),
+        deleteAreaSelect=document.getElementById('deleteAreaSelect'),
+        gpsInfoDiv=document.getElementById('gpsInfo'),
+        gpsSpeedSpan=document.getElementById('gpsSpeed'),
+        gpsCourseSpan=document.getElementById('gpsCourse'),
+        measurementInfoDiv=document.getElementById('measurementInfo'),
+        measureBtn=document.getElementById('measureBtn'),
+        stopMeasureBtn=document.getElementById('stopMeasureBtn'),
+        movingTrackOnBtn=document.getElementById('movingTrackOnBtn'),
+        movingTrackOffBtn=document.getElementById('movingTrackOffBtn'),
+        movingTrackInfoDiv=document.getElementById('movingTrackInfo'),
+        trackDistanceSpan=document.getElementById('trackDistance'),
+        trackCourseSpan=document.getElementById('trackCourse'),
+        trackSpeedSpan=document.getElementById('trackSpeed');
+
+  /* ================================================
+     AREA VISIBILITY PANEL — new feature
+  ================================================ */
+  function renderAreaVisibilityList(){
+    const container=document.getElementById('areaVisList');
+    container.innerHTML='';
+    if(areas.length===0){
+      container.innerHTML='<div id="areaVisEmpty">No areas saved yet</div>';
+      return;
+    }
+    areas.forEach(area=>{
+      // Default: visible (true) unless explicitly set false
+      if(areaVisible[area.id]===undefined)areaVisible[area.id]=true;
+
+      const row=document.createElement('div');
+      row.className='area-vis-item';
+
+      const dot=document.createElement('span');
+      dot.className='area-vis-dot';
+      dot.textContent='●';
+      dot.style.color=area.color||'#8b45c1';
+
+      const nameEl=document.createElement('span');
+      nameEl.className='area-vis-name';
+      nameEl.textContent=area.name;
+
+      const typeEl=document.createElement('span');
+      typeEl.className='area-vis-type';
+      typeEl.textContent=area.type==='circular'?'⭕':'📐';
+
+      const label=document.createElement('label');
+      label.className='vis-toggle';
+      const checkbox=document.createElement('input');
+      checkbox.type='checkbox';
+      checkbox.checked=areaVisible[area.id];
+      const slider=document.createElement('span');
+      slider.className='vis-slider';
+      label.appendChild(checkbox);
+      label.appendChild(slider);
+
+  checkbox.onchange=function(){
+        areaVisible[area.id]=this.checked;
+        if(this.checked){
+          drawArea(area);
+        }else{
+          if(areaPolygons[area.id]){
+            map.removeLayer(areaPolygons[area.id]);
+            delete areaPolygons[area.id];
+          }
+        }
+        saveLocal(); // ADD THIS LINE — persist immediately
+      };
+
+      row.appendChild(dot);
+      row.appendChild(typeEl);
+      row.appendChild(nameEl);
+      row.appendChild(label);
+      container.appendChild(row);
+    });
+  }
+
+  /* ================================================
+     WAYPOINT LIST MODAL
+  ================================================ */
+  document.getElementById('showWaypointListBtn').onclick=function(){
+    const modal=document.getElementById('waypointListModal');
+    const content=document.getElementById('waypointListContent');
+    content.innerHTML='';
+    if(waypoints.length===0){
+      content.innerHTML='<p style="text-align:center;color:var(--text-dim);font-family:var(--font-mono)">No waypoints saved yet</p>';
+    }else{
+      waypoints.forEach(w=>{
+        const markerType=MARKER_TYPES[w.markerType||'default'],div=document.createElement('div');
+        div.className='modal-list-item';
+        div.innerHTML=`<b>${w.name}</b> <span style="color:${markerType.color};">●</span><br>
+          <span class="small">${formatDMS(w.lat,true)}, ${formatDMS(w.lon,false)} - ${markerType.label}</span>
+          ${w.info?`<div class="info-text">${w.info}</div>`:''}
+          <div class="waypoint-actions">
+            <a class="btn small btn-blue" onclick="editWaypoint(${w.id})">✏️ Edit</a>
+            <a class="btn small btn-red" onclick="deleteWaypoint(${w.id})">🗑️ Del</a>
+            <a class="btn small btn-purple" onclick="selectWaypoint(${w.id})">🎯 Sel</a>
+          </div>`;
+        content.appendChild(div);
+      });
+    }
+    modal.style.display='block';
+  };
+  document.getElementById('closeWaypointListBtn').onclick=function(){
+    document.getElementById('waypointListModal').style.display='none';
+  };
+
+  /* ================================================
+     AREA LIST MODAL
+  ================================================ */
+  document.getElementById('showAreaListBtn').onclick=function(){
+    const modal=document.getElementById('areaListModal');
+    const content=document.getElementById('areaListContent');
+    content.innerHTML='';
+    if(areas.length===0){
+      content.innerHTML='<p style="text-align:center;color:var(--text-dim);font-family:var(--font-mono)">No areas saved yet</p>';
+    }else{
+      areas.forEach(area=>{
+        const div=document.createElement('div');div.className='modal-list-item';
+        const areaTypeLabel=area.type==='circular'?'⭕ Circular':'📐 Polygon';
+        const detailText=area.type==='circular'?`Diameter: ${area.diameter} NM, Center: ${area.centerWaypoint}`:`${area.corners.length} corners`;
+        div.innerHTML=`<b>${area.name}</b> <span style="color:${area.color||'#8b45c1'};">●</span> ${areaTypeLabel}<br>
+          <span class="small">${detailText}</span>
+          ${area.info?`<div class="info-text">${area.info}</div>`:''}`;
+        content.appendChild(div);
+      });
+    }
+    modal.style.display='block';
+  };
+  document.getElementById('closeAreaListBtn').onclick=function(){
+    document.getElementById('areaListModal').style.display='none';
+  };
+
+  /* ================================================
+     MATH
+  ================================================ */
+  function haversineNM(lat1,lon1,lat2,lon2){
+    const R=6371e3,toRad=v=>v*Math.PI/180,φ1=toRad(lat1),φ2=toRad(lat2),
+          Δφ=toRad(lat2-lat1),Δλ=toRad(lon2-lon1),
+          a=Math.sin(Δφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+    return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))/1852;
+  }
+  function bearing(lat1,lon1,lat2,lon2){
+    const toRad=v=>v*Math.PI/180,toDeg=v=>180*v/Math.PI,
+          φ1=toRad(lat1),φ2=toRad(lat2),λ1=toRad(lon1),λ2=toRad(lon2),
+          y=Math.sin(λ2-λ1)*Math.cos(φ2),
+          x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(λ2-λ1);
+    return(toDeg(Math.atan2(y,x))+360)%360;
+  }
+  function destinationPoint(lat,lon,brng,distanceNM){
+    const R=6371e3,distanceM=1852*distanceNM,toRad=v=>v*Math.PI/180,toDeg=v=>180*v/Math.PI,
+          φ1=toRad(lat),λ1=toRad(lon),b=toRad(brng),δ=distanceM/R,
+          φ2=Math.asin(Math.sin(φ1)*Math.cos(δ)+Math.cos(φ1)*Math.sin(δ)*Math.cos(b)),
+          λ2=λ1+Math.atan2(Math.sin(b)*Math.sin(δ)*Math.cos(φ1),Math.cos(δ)-Math.sin(φ1)*Math.sin(φ2));
+    return{lat:toDeg(φ2),lon:toDeg(λ2)};
+  }
+
+  /* ================================================
+     GPS
+  ================================================ */
+  function updateGPSInfo(speed,heading){
+    lastSpeedGPS=speed;lastCourseGPS=heading;
+    gpsSpeedSpan.textContent=speed.toFixed(1)+' kts';
+    gpsCourseSpan.textContent=heading.toFixed(1)+'°';
+    if(flyMarker)flyMarker.setIcon(createHelicopterIcon(heading));
+  }
+
+  /* ================================================
+     MOVING TRACK
+  ================================================ */
+  function startMovingTrack(){
+    if(!flyMarker)return void alert('Moving Track only works in Flying Mode. Please start Flying Mode first.');
+    movingTrackActive=true;movingTrackInfoDiv.style.display='block';
+    updateMovingTrack();movingTrackUpdateInterval=setInterval(updateMovingTrack,1000);
+  }
+  function stopMovingTrack(){
+    movingTrackActive=false;movingTrackInfoDiv.style.display='none';
+    if(movingTrackUpdateInterval){clearInterval(movingTrackUpdateInterval);movingTrackUpdateInterval=null;}
+    if(movingTrackLine){map.removeLayer(movingTrackLine);movingTrackLine=null;}
+  }
+  function updateMovingTrack(){
+    if(!movingTrackActive||!flyMarker)return;
+    const currentPos=flyMarker.getLatLng(),currentSpeed=lastSpeedGPS,currentCourse=lastCourseGPS,
+          timeMinutes=20,distanceNM=currentSpeed*timeMinutes/60;
+    trackDistanceSpan.textContent=distanceNM.toFixed(2)+' NM';
+    trackCourseSpan.textContent=currentCourse.toFixed(1)+'°';
+    trackSpeedSpan.textContent=currentSpeed.toFixed(1)+' kts';
+    const endPoint=destinationPoint(currentPos.lat,currentPos.lng,currentCourse,distanceNM);
+    if(movingTrackLine)map.removeLayer(movingTrackLine);
+    movingTrackLine=L.polyline([[currentPos.lat,currentPos.lng],[endPoint.lat,endPoint.lon]],
+      {color:'#00ff00',weight:3,opacity:.8,dashArray:'10, 10',interactive:false}).addTo(map);
+  }
+
+  /* ================================================
+     MEASURE TOOL
+  ================================================ */
+  function startMeasureTool(){
+    measureActive=true;measureBtn.style.display='none';stopMeasureBtn.style.display='block';
+    const center=map.getCenter(),bounds=map.getBounds(),
+          latSpan=.2*(bounds.getNorth()-bounds.getSouth()),lonSpan=.2*(bounds.getEast()-bounds.getWest()),
+          startPoint=L.latLng(center.lat-latSpan,center.lng-lonSpan),
+          endPoint=L.latLng(center.lat+latSpan,center.lng+lonSpan);
+    measurementLine=L.polyline([startPoint,endPoint],{color:'#ff00ff',weight:8,opacity:.8,interactive:false}).addTo(map);
+    const createBigEndpointIcon=()=>L.divIcon({
+      html:'<div style="width:40px;height:40px;background:transparent;border:5px solid #ff00ff;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,0.5);"></div>',
+      className:'',iconSize:[40,40],iconAnchor:[20,20]
+    });
+    measureStartMarker=L.marker(startPoint,{icon:createBigEndpointIcon(),draggable:true,zIndexOffset:3000}).addTo(map);
+    measureEndMarker=L.marker(endPoint,{icon:createBigEndpointIcon(),draggable:true,zIndexOffset:3000}).addTo(map);
+    measureStartMarker.on('drag',function(){measurementLine.setLatLngs([measureStartMarker.getLatLng(),measureEndMarker.getLatLng()]);updateMeasurementDisplay();});
+    measureEndMarker.on('drag',function(){measurementLine.setLatLngs([measureStartMarker.getLatLng(),measureEndMarker.getLatLng()]);updateMeasurementDisplay();});
+    updateMeasurementDisplay();measurementInfoDiv.style.display='block';
+  }
+  function stopMeasureTool(){
+    measureActive=false;measureBtn.style.display='block';stopMeasureBtn.style.display='none';
+    measurementInfoDiv.style.display='none';
+    if(measurementLine){map.removeLayer(measurementLine);measurementLine=null;}
+    if(measureStartMarker){map.removeLayer(measureStartMarker);measureStartMarker=null;}
+    if(measureEndMarker){map.removeLayer(measureEndMarker);measureEndMarker=null;}
+  }
+  function updateMeasurementDisplay(){
+    if(!measureStartMarker||!measureEndMarker)return;
+    const s=measureStartMarker.getLatLng(),e=measureEndMarker.getLatLng(),
+          dist=haversineNM(s.lat,s.lng,e.lat,e.lng),
+          brgAB=bearing(s.lat,s.lng,e.lat,e.lng),brgBA=bearing(e.lat,e.lng,s.lat,s.lng);
+    document.getElementById('measureDist').textContent=dist.toFixed(2)+' NM';
+    document.getElementById('measureBrgAB').textContent=brgAB.toFixed(1)+'°';
+    document.getElementById('measureBrgBA').textContent=brgBA.toFixed(1)+'°';
+  }
+
+  measureBtn.onclick=function(e){e.stopPropagation();startMeasureTool();};
+  stopMeasureBtn.onclick=function(e){e.stopPropagation();stopMeasureTool();};
+  movingTrackOnBtn.onclick=function(e){e.stopPropagation();startMovingTrack();};
+  movingTrackOffBtn.onclick=function(e){e.stopPropagation();stopMovingTrack();};
+
+  /* ================================================
+     MAP CLICK
+  ================================================ */
+  map.on('click',e=>{
+    if(measureActive)return;
+    pendingTapLocation={lat:e.latlng.lat,lon:e.latlng.lng};
+    coordsOut.textContent=formatDMS(e.latlng.lat,true)+', '+formatDMS(e.latlng.lng,false);
+    const modal=document.getElementById('tapConfirmModal');
+    document.getElementById('tapCoords').innerHTML=
+      `<strong>Lat:</strong> ${formatDMS(e.latlng.lat,true)}<br><strong>Lon:</strong> ${formatDMS(e.latlng.lng,false)}`;
+    modal.style.display='block';
+  });
+  document.getElementById('confirmWaypointBtn').onclick=function(){
+    if(pendingTapLocation){
+      showWaypointCreationDialog(pendingTapLocation.lat,pendingTapLocation.lon);
+      document.getElementById('tapConfirmModal').style.display='none';
+      pendingTapLocation=null;
+    }
+  };
+  document.getElementById('cancelWaypointBtn').onclick=function(){
+    document.getElementById('tapConfirmModal').style.display='none';pendingTapLocation=null;
+  };
+
+  function showWaypointCreationDialog(lat,lon){
+    const name=prompt('Enter waypoint name:','WP-'+(waypoints.length+1));
+    if(name){const info=prompt('Enter waypoint info/notes (optional):','');addWaypoint(lat,lon,name,'default',info||'');}
+  }
+
+  /* ================================================
+     RENDER LIST
+  ================================================ */
+  function renderList(){
+    directSelect.innerHTML='<option value="">Select Waypoint</option>';
+    waypoints.forEach(w=>{
+      const opt=document.createElement('option');opt.value=w.id;opt.text=w.name;directSelect.appendChild(opt);
+    });
+  }
+
+  /* ================================================
+     EDIT WAYPOINT
+  ================================================ */
+  window.editWaypoint=function(id){
+    const wp=waypoints.find(w=>w.id===id);if(!wp)return;
+    const latDMS=decimalToDMS(wp.lat,true),lonDMS=decimalToDMS(wp.lon,false);
+    const editModal=document.createElement('div');
+    editModal.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:10001;display:flex;align-items:center;justify-content:center;overflow:auto;backdrop-filter:blur(4px);';
+    const inStyle='width:100%;background:var(--bg-deep);color:var(--text-primary);border:1px solid var(--border-glow);border-radius:6px;padding:8px;font-family:var(--font-mono);font-size:13px;margin:4px 0 10px;box-sizing:border-box;';
+    editModal.innerHTML=`<div style="background:var(--bg-panel);border:1px solid var(--border-glow);padding:20px;border-radius:12px;max-width:400px;width:90%;max-height:90vh;overflow:auto;box-shadow:0 0 40px rgba(0,0,0,0.8);">
+      <h3 style="font-family:var(--font-display);font-size:13px;letter-spacing:2px;color:var(--accent-cyan);margin:0 0 14px;">✏️ EDIT WAYPOINT</h3>
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin-bottom:2px;">NAME</div>
+      <input type="text" id="editName" value="${wp.name}" style="${inStyle}">
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin-bottom:2px;">LATITUDE</div>
+      <div style="display:flex;gap:5px;margin-bottom:10px;">
+        <input type="number" id="editLatDeg" placeholder="Deg" value="${latDMS.degrees}" style="flex:1;background:var(--bg-deep);color:var(--text-primary);border:1px solid var(--border-glow);border-radius:6px;padding:8px;font-family:var(--font-mono);font-size:13px;box-sizing:border-box;">
+        <input type="number" step="0.001" id="editLatMin" placeholder="Min" value="${latDMS.minutes.toFixed(3)}" style="flex:1;background:var(--bg-deep);color:var(--text-primary);border:1px solid var(--border-glow);border-radius:6px;padding:8px;font-family:var(--font-mono);font-size:13px;box-sizing:border-box;">
+        <select id="editLatDir" style="flex:0.5;background:var(--bg-deep);color:var(--text-primary);border:1px solid var(--border-glow);border-radius:6px;padding:8px;font-size:13px;box-sizing:border-box;">
+          <option value="N" ${'N'===latDMS.direction?'selected':''}>N</option><option value="S" ${'S'===latDMS.direction?'selected':''}>S</option>
+        </select>
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin-bottom:2px;">LONGITUDE</div>
+      <div style="display:flex;gap:5px;margin-bottom:10px;">
+        <input type="number" id="editLonDeg" placeholder="Deg" value="${lonDMS.degrees}" style="flex:1;background:var(--bg-deep);color:var(--text-primary);border:1px solid var(--border-glow);border-radius:6px;padding:8px;font-family:var(--font-mono);font-size:13px;box-sizing:border-box;">
+        <input type="number" step="0.001" id="editLonMin" placeholder="Min" value="${lonDMS.minutes.toFixed(3)}" style="flex:1;background:var(--bg-deep);color:var(--text-primary);border:1px solid var(--border-glow);border-radius:6px;padding:8px;font-family:var(--font-mono);font-size:13px;box-sizing:border-box;">
+        <select id="editLonDir" style="flex:0.5;background:var(--bg-deep);color:var(--text-primary);border:1px solid var(--border-glow);border-radius:6px;padding:8px;font-size:13px;box-sizing:border-box;">
+          <option value="E" ${'E'===lonDMS.direction?'selected':''}>E</option><option value="W" ${'W'===lonDMS.direction?'selected':''}>W</option>
+        </select>
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin-bottom:4px;">MARKER TYPE</div>
+      <div class="marker-type-grid" id="markerTypeGrid" style="margin:0 0 10px;"></div>
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin-bottom:2px;">INFO / NOTES</div>
+      <textarea id="editInfo" rows="3" placeholder="Enter information..." style="${inStyle}resize:vertical;">${wp.info||''}</textarea>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button id="saveEdit" style="flex:1;padding:10px;background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.4);color:var(--accent-green);border-radius:6px;font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;">💾 SAVE</button>
+        <button id="cancelEdit" style="flex:1;padding:10px;background:rgba(255,23,68,0.12);border:1px solid rgba(255,23,68,0.4);color:var(--accent-red);border-radius:6px;font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;">✖ CANCEL</button>
+      </div>
+    </div>`;
+    document.body.appendChild(editModal);
+    const grid=editModal.querySelector('#markerTypeGrid');
+    Object.keys(MARKER_TYPES).forEach(typeKey=>{
+      const type=MARKER_TYPES[typeKey],option=document.createElement('div');
+      option.className='marker-type-option'+(wp.markerType===typeKey?' selected':'');
+      option.dataset.type=typeKey;
+      let iconPreview='H'===type.shape?`<div style="width:16px;height:16px;background:${type.color};border:1.5px solid #000;display:inline-flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;font-size:11px;">H</div>`
+        :'star'===type.shape?`<span style="color:${type.color};font-size:16px;">★</span>`
+        :'diamond'===type.shape?`<span style="color:${type.color};font-size:16px;">◆</span>`
+        :'triangle'===type.shape?`<span style="color:${type.color};font-size:16px;">▲</span>`
+        :'square'===type.shape?`<span style="color:${type.color};font-size:16px;">■</span>`
+        :`<span style="color:${type.color};font-size:16px;">●</span>`;
+      option.innerHTML=`<div class="marker-icon-preview">${iconPreview}</div><div class="marker-type-label">${type.label}</div>`;
+      option.onclick=function(){editModal.querySelectorAll('.marker-type-option').forEach(o=>o.classList.remove('selected'));this.classList.add('selected');};
+      grid.appendChild(option);
+    });
+    editModal.querySelector('#saveEdit').onclick=()=>{
+      const newName=editModal.querySelector('#editName').value.trim(),
+            latDeg=parseFloat(editModal.querySelector('#editLatDeg').value),
+            latMin=parseFloat(editModal.querySelector('#editLatMin').value),
+            latDir=editModal.querySelector('#editLatDir').value,
+            lonDeg=parseFloat(editModal.querySelector('#editLonDeg').value),
+            lonMin=parseFloat(editModal.querySelector('#editLonMin').value),
+            lonDir=editModal.querySelector('#editLonDir').value,
+            selectedType=editModal.querySelector('.marker-type-option.selected')?.dataset.type||'default',
+            newInfo=editModal.querySelector('#editInfo').value.trim();
+      if(newName)wp.name=newName;
+      if(!isNaN(latDeg)&&!isNaN(latMin))wp.lat=DMSToDecimal(latDeg,latMin,latDir);
+      if(!isNaN(lonDeg)&&!isNaN(lonMin))wp.lon=DMSToDecimal(lonDeg,lonMin,lonDir);
+      wp.markerType=selectedType;wp.info=newInfo;
+      map.removeLayer(markers[id]);markers[id]=createMarkerForWaypoint(wp);
+      renderList();saveLocal();document.body.removeChild(editModal);
+    };
+    editModal.querySelector('#cancelEdit').onclick=()=>{document.body.removeChild(editModal);};
+  };
+
+  /* ================================================
+     MARKER FACTORY
+  ================================================ */
+  function createMarkerForWaypoint(wp){
+    const markerType=MARKER_TYPES[wp.markerType||'default'];
+    let marker='circle'===markerType.shape
+      ?L.circleMarker([wp.lat,wp.lon],{radius:5,color:markerType.color,fillColor:markerType.color,fillOpacity:.9,weight:2}).addTo(map)
+      :L.marker([wp.lat,wp.lon],{icon:createMarkerIcon(wp.markerType||'default')}).addTo(map);
+    const popupContent=`<b style="font-family:'Rajdhani',sans-serif;color:#e8f4ff">${wp.name}</b><br><span style="color:#7899b8;font-family:'Share Tech Mono',monospace;font-size:11px">${formatDMS(wp.lat,true)}, ${formatDMS(wp.lon,false)}</span><br><span style="color:#0af;font-size:11px">${markerType.label}</span>${wp.info?'<br><i style="color:#aaa;font-size:11px">'+wp.info+'</i>':''}<br><a href="#" onclick="editWaypoint(${wp.id})" style="color:#00e5ff">Edit</a>`;
+    marker.bindPopup(popupContent);
+    marker.on('click',()=>window.selectWaypoint(wp.id));
+    return marker;
+  }
+
+  /* ================================================
+     WAYPOINT CRUD
+  ================================================ */
+  window.deleteWaypoint=function(id){
+    if(confirm('Delete this waypoint?')){
+      waypoints=waypoints.filter(w=>w.id!==id);map.removeLayer(markers[id]);delete markers[id];
+      renderList();saveLocal();
+    }
+  };
+  window.selectWaypoint=function(id){
+    const idx=selected.indexOf(id);
+    if(-1===idx)selected.push(id);else selected.splice(idx,1);
+    waypoints.forEach(wp=>{
+      const marker=markers[wp.id];if(!marker)return;
+      const isSelected=selected.includes(wp.id),markerType=MARKER_TYPES[wp.markerType||'default'];
+      if(marker instanceof L.CircleMarker)marker.setStyle({color:isSelected?'#00f':markerType.color,fillColor:isSelected?'#00f':markerType.color});
+    });
+  };
+  function addWaypoint(lat,lon,name,markerType='default',info=''){
+    const id=Date.now()+Math.floor(999*Math.random());
+    const wp={id,lat,lon,name:name||'WP-'+(waypoints.length+1),markerType,info};
+    waypoints.push(wp);markers[id]=createMarkerForWaypoint(wp);renderList();saveLocal();
+  }
+  function addWaypointNoSave(lat,lon,name,markerType='default',info=''){
+    const id=Date.now()+Math.floor(999*Math.random());
+    const wp={id,lat,lon,name:name||'WP-'+(waypoints.length+1),markerType,info};
+    waypoints.push(wp);markers[id]=createMarkerForWaypoint(wp);renderList();
+  }
+
+  /* ================================================
+     ROUTE
+  ================================================ */
+  function makeRoute(){
+    if(selected.length<2)return void alert('Select at least 2 waypoints');
+    if(routeLayer)map.removeLayer(routeLayer);
+    checkpointMarkers.forEach(cp=>map.removeLayer(cp));checkpointMarkers=[];
+    const latlngs=selected.map(id=>{const w=waypoints.find(wp=>wp.id===id);return[w.lat,w.lon];});
+    routeLayer=L.polyline(latlngs,{color:'#ff6600',weight:2}).addTo(map);
+    updateRouteSummary();routeLayer.on('click',e=>addCheckpoint(e.latlng));
+  }
+  function updateRouteSummary(){
+    if(selected.length<2)return;
+    let cumulativeDistance=0,cumulativeTimeInput=0,cumulativeTimeGPS=0;
+    const speedInput=parseFloat(document.getElementById('speedInput').value)||0;
+    routeSummaryDiv.innerHTML='';
+    for(let i=0;i<selected.length-1;i++){
+      const a=waypoints.find(w=>w.id===selected[i]),b=waypoints.find(w=>w.id===selected[i+1]);
+      const dist=haversineNM(a.lat,a.lon,b.lat,b.lon);cumulativeDistance+=dist;
+      const timeInput=speedInput>0?dist/speedInput*60:0,timeGPS=lastSpeedGPS>0?dist/lastSpeedGPS*60:0;
+      cumulativeTimeInput+=timeInput;cumulativeTimeGPS+=timeGPS;
+      const brg=bearing(a.lat,a.lon,b.lat,b.lon);
+      routeSummaryDiv.innerHTML+=`<b>${a.name} → ${b.name}</b>: ${dist.toFixed(2)} NM, ${brg.toFixed(1)}°, ETA Input: ${timeInput.toFixed(1)} min, ETA GPS: ${timeGPS.toFixed(1)} min<br>`;
+    }
+    routeSummaryDiv.innerHTML+=`<b>Total:</b> ${cumulativeDistance.toFixed(2)} NM, ETA Input: ${cumulativeTimeInput.toFixed(1)} min, ETA GPS: ${cumulativeTimeGPS.toFixed(1)} min`;
+  }
+  function addCheckpoint(latlng){
+    let prevLatLng;
+    if(checkpointMarkers.length>0)prevLatLng=checkpointMarkers[checkpointMarkers.length-1].getLatLng();
+    else if(selected.length>0){const firstWp=waypoints.find(w=>w.id===selected[0]);prevLatLng={lat:firstWp.lat,lng:firstWp.lon};}
+    else prevLatLng=flyMarker?flyMarker.getLatLng():map.getCenter();
+    const dist=haversineNM(prevLatLng.lat,prevLatLng.lng,latlng.lat,latlng.lng),
+          inputSpeed=parseFloat(document.getElementById('speedInput').value)||0,
+          etaInput=inputSpeed>0?(dist/inputSpeed*60).toFixed(1)+' min':'N/A',
+          etaGPS=lastSpeedGPS>0?(dist/lastSpeedGPS*60).toFixed(1)+' min':'N/A';
+    const cpMarker=L.circleMarker([latlng.lat,latlng.lng],{radius:4,color:'#0a0',fillColor:'#0a0',fillOpacity:.8}).addTo(map);
+    cpMarker.bindPopup(`Checkpoint<br>Distance: ${dist.toFixed(2)} NM<br>ETA Input: ${etaInput}<br>ETA GPS: ${etaGPS}`).openPopup();
+    cpMarker.bindTooltip(`Dist: ${dist.toFixed(2)} NM, ETA Input: ${etaInput}, ETA GPS: ${etaGPS}`,{permanent:true,direction:'top'});
+    checkpointMarkers.push(cpMarker);
+  }
+  function clearRoute(){
+    if(routeLayer)map.removeLayer(routeLayer);routeLayer=null;
+    checkpointMarkers.forEach(cp=>map.removeLayer(cp));checkpointMarkers=[];
+    selected=[];routeSummaryDiv.innerHTML='';
+    waypoints.forEach(wp=>{
+      const marker=markers[wp.id];if(!marker)return;
+      const markerType=MARKER_TYPES[wp.markerType||'default'];
+      if(marker instanceof L.CircleMarker)marker.setStyle({color:markerType.color,fillColor:markerType.color});
+    });
+  }
+
+  /* ================================================
+     AREA RENDER LIST
+  ================================================ */
+  function renderAreaList(){
+    editAreaSelect.innerHTML='<option value="">Select Area to Edit</option>';
+    deleteAreaSelect.innerHTML='<option value="">Select Area to Delete</option>';
+    areas.forEach(area=>{
+      const editOpt=document.createElement('option');editOpt.value=area.id;editOpt.text=area.name;editAreaSelect.appendChild(editOpt);
+      const delOpt=document.createElement('option');delOpt.value=area.id;delOpt.text=area.name;deleteAreaSelect.appendChild(delOpt);
+    });
+    renderAreaVisibilityList(); // refresh visibility panel too
+  }
+
+  /* ================================================
+     DRAW AREA — respects visibility state
+  ================================================ */
+  function drawArea(area){
+    if(areaPolygons[area.id])map.removeLayer(areaPolygons[area.id]);
+    // Only draw if visible (default true for new areas)
+    if(areaVisible[area.id]===false)return;
+
+    if(area.type==='circular'){
+      const centerWp=waypoints.find(w=>w.name===area.centerWaypoint);if(!centerWp)return;
+      const radiusMeters=(area.diameter/2)*1852;
+      const circle=L.circle([centerWp.lat,centerWp.lon],{radius:radiusMeters,color:area.color||'#ff0000',fillColor:'transparent',fillOpacity:0,weight:3}).addTo(map);
+      circle.bindTooltip(area.name,{permanent:true,direction:'center',className:'area-label',opacity:0.8});
+      areaPolygons[area.id]=circle;
+    }else{
+      const latlngs=area.corners.map(c=>[c.lat,c.lon]),areaColor=area.color||'#8b45c1';
+      const polygon=L.polygon(latlngs,{color:areaColor,fillColor:areaColor,fillOpacity:0.2,weight:2}).addTo(map);
+      polygon.bindTooltip(area.name,{permanent:true,direction:'center',className:'area-label',opacity:0.8});
+      areaPolygons[area.id]=polygon;
+    }
+  }
+
+  /* ================================================
+     AREA MODAL
+  ================================================ */
+  function showAreaModal(editMode=false,areaId=null){
+    const modal=document.getElementById('areaModal'),
+          polygonSection=document.getElementById('polygonSection'),
+          circularSection=document.getElementById('circularSection'),
+          numCornersInput=document.getElementById('numCorners'),
+          cornerInputsDiv=document.getElementById('cornerInputs'),
+          nameSection=document.getElementById('nameSection'),
+          areaNameInput=document.getElementById('areaName'),
+          areaInfoInput=document.getElementById('areaInfo'),
+          circularWaypointSelect=document.getElementById('circularWaypointSelect');
+    modal.style.display='block';cornerInputsDiv.innerHTML='';nameSection.style.display='none';
+    circularWaypointSelect.innerHTML='<option value="">Choose waypoint as center</option>';
+    waypoints.forEach(w=>{const opt=document.createElement('option');opt.value=w.name;opt.text=w.name;circularWaypointSelect.appendChild(opt);});
+    document.querySelectorAll('.color-option').forEach(opt=>opt.classList.remove('selected'));
+    document.querySelectorAll('.circular-color-option').forEach(opt=>opt.classList.remove('selected'));
+    document.querySelectorAll('.area-type-option').forEach(opt=>opt.classList.remove('selected'));
+    document.querySelector('.area-type-option[data-type="polygon"]').classList.add('selected');
+    polygonSection.style.display='block';circularSection.style.display='none';
+    if(editMode&&areaId){
+      editingAreaId=areaId;
+      const area=areas.find(a=>a.id===areaId);if(!area)return;
+      document.getElementById('modalTitle').textContent='EDIT AREA';
+      if(area.type==='circular'){
+        document.querySelector('.area-type-option[data-type="circular"]').classList.add('selected');
+        document.querySelector('.area-type-option[data-type="polygon"]').classList.remove('selected');
+        polygonSection.style.display='none';circularSection.style.display='block';
+        document.getElementById('circularWaypointSelect').value=area.centerWaypoint;
+        document.getElementById('circularDiameter').value=area.diameter;
+        document.getElementById('circularAreaName').value=area.name;
+        document.getElementById('circularAreaInfo').value=area.info||'';
+        const sc=area.color||'#ff0000';document.querySelectorAll('.circular-color-option').forEach(opt=>{if(opt.dataset.color===sc)opt.classList.add('selected');});
+      }else{
+        numCornersInput.value=area.corners.length;areaNameInput.value=area.name;areaInfoInput.value=area.info||'';
+        const sc=area.color||'#dc3545';document.querySelectorAll('.color-option').forEach(opt=>{if(opt.dataset.color===sc)opt.classList.add('selected');});
+        createCornerInputs(area.corners.length,area.corners);
+      }
+    }else{
+      editingAreaId=null;document.getElementById('modalTitle').textContent='CREATE NEW AREA';
+      numCornersInput.value='';areaNameInput.value='';areaInfoInput.value='';
+      document.getElementById('circularDiameter').value='';
+      document.getElementById('circularAreaName').value='';document.getElementById('circularAreaInfo').value='';
+      const dc=document.querySelector('.color-option[data-color="#dc3545"]');if(dc)dc.classList.add('selected');
+      const rc=document.querySelector('.circular-color-option[data-color="#ff0000"]');if(rc)rc.classList.add('selected');
+    }
+  }
+
+  document.querySelectorAll('.area-type-option').forEach(option=>{
+    option.onclick=function(){
+      document.querySelectorAll('.area-type-option').forEach(o=>o.classList.remove('selected'));this.classList.add('selected');
+      const type=this.dataset.type;
+      document.getElementById('polygonSection').style.display=type==='polygon'?'block':'none';
+      document.getElementById('circularSection').style.display=type==='circular'?'block':'none';
+    };
+  });
+  document.querySelectorAll('.color-option').forEach(option=>{option.onclick=function(){document.querySelectorAll('.color-option').forEach(o=>o.classList.remove('selected'));this.classList.add('selected');};});
+  document.querySelectorAll('.circular-color-option').forEach(option=>{option.onclick=function(){document.querySelectorAll('.circular-color-option').forEach(o=>o.classList.remove('selected'));this.classList.add('selected');};});
+
+  function createCornerInputs(numCorners,existingCorners=[]){
+    const cornerInputsDiv=document.getElementById('cornerInputs'),nameSection=document.getElementById('nameSection');
+    cornerInputsDiv.innerHTML='';
+    const inS='background:var(--bg-panel);color:var(--text-primary);border:1px solid var(--border-glow);border-radius:4px;padding:6px;font-size:12px;font-family:var(--font-mono);box-sizing:border-box;';
+    for(let i=0;i<numCorners;i++){
+      const corner=existingCorners[i];
+      let latDMS={degrees:'',minutes:'',direction:'N'},lonDMS={degrees:'',minutes:'',direction:'E'};
+      if(corner){latDMS=decimalToDMS(corner.lat,true);lonDMS=decimalToDMS(corner.lon,false);}
+      const cornerDiv=document.createElement('div');cornerDiv.className='corner-input';
+      cornerDiv.innerHTML=`<label>CORNER ${i+1}</label>
+        <div style="display:flex;gap:3px;margin:3px 0;">
+          <input type="number" id="lat_deg_${i}" placeholder="Lat °" value="${corner?latDMS.degrees:''}" style="flex:1;${inS}">
+          <input type="number" step="0.001" id="lat_min_${i}" placeholder="'" value="${corner?latDMS.minutes.toFixed(3):''}" style="flex:1;${inS}">
+          <select id="lat_dir_${i}" style="flex:0.5;${inS}"><option value="N" ${'N'===latDMS.direction?'selected':''}>N</option><option value="S" ${'S'===latDMS.direction?'selected':''}>S</option></select>
+        </div>
+        <div style="display:flex;gap:3px;margin:3px 0;">
+          <input type="number" id="lon_deg_${i}" placeholder="Lon °" value="${corner?lonDMS.degrees:''}" style="flex:1;${inS}">
+          <input type="number" step="0.001" id="lon_min_${i}" placeholder="'" value="${corner?lonDMS.minutes.toFixed(3):''}" style="flex:1;${inS}">
+          <select id="lon_dir_${i}" style="flex:0.5;${inS}"><option value="E" ${'E'===lonDMS.direction?'selected':''}>E</option><option value="W" ${'W'===lonDMS.direction?'selected':''}>W</option></select>
+        </div>`;
+      cornerInputsDiv.appendChild(cornerDiv);
+    }
+    nameSection.style.display='block';
+  }
+
+  function saveArea(){
+    const numCorners=parseInt(document.getElementById('numCorners').value),
+          areaName=document.getElementById('areaName').value.trim(),
+          areaInfo=document.getElementById('areaInfo').value.trim(),
+          selectedColorOption=document.querySelector('.color-option.selected'),
+          areaColor=selectedColorOption?selectedColorOption.dataset.color:'#dc3545';
+    if(!areaName)return void alert('Please enter an area name');
+    const corners=[];
+    for(let i=0;i<numCorners;i++){
+      const latDeg=parseFloat(document.getElementById(`lat_deg_${i}`).value),
+            latMin=parseFloat(document.getElementById(`lat_min_${i}`).value),
+            latDir=document.getElementById(`lat_dir_${i}`).value,
+            lonDeg=parseFloat(document.getElementById(`lon_deg_${i}`).value),
+            lonMin=parseFloat(document.getElementById(`lon_min_${i}`).value),
+            lonDir=document.getElementById(`lon_dir_${i}`).value;
+      if(isNaN(latDeg)||isNaN(latMin)||isNaN(lonDeg)||isNaN(lonMin))return void alert(`Invalid coordinates for corner ${i+1}`);
+      corners.push({lat:DMSToDecimal(latDeg,latMin,latDir),lon:DMSToDecimal(lonDeg,lonMin,lonDir)});
+    }
+    if(editingAreaId){
+      const area=areas.find(a=>a.id===editingAreaId);
+      if(area){area.name=areaName;area.corners=corners;area.color=areaColor;area.info=areaInfo;area.type='polygon';drawArea(area);}
+    }else{
+      const id=Date.now()+Math.floor(999*Math.random());
+      const newArea={id,name:areaName,corners,color:areaColor,info:areaInfo,type:'polygon'};
+      areaVisible[id]=true; // new areas default to visible
+      areas.push(newArea);drawArea(newArea);
+    }
+    renderAreaList();saveLocal();closeAreaModal();
+  }
+
+  function saveCircularArea(){
+    const waypointName=document.getElementById('circularWaypointSelect').value,
+          diameter=parseFloat(document.getElementById('circularDiameter').value),
+          areaName=document.getElementById('circularAreaName').value.trim(),
+          areaInfo=document.getElementById('circularAreaInfo').value.trim(),
+          selectedColorOption=document.querySelector('.circular-color-option.selected'),
+          areaColor=selectedColorOption?selectedColorOption.dataset.color:'#ff0000';
+    if(!waypointName)return alert('Please select a waypoint');
+    if(isNaN(diameter)||diameter<=0)return alert('Please enter a valid diameter');
+    if(!areaName)return alert('Please enter an area name');
+    if(editingAreaId){
+      const area=areas.find(a=>a.id===editingAreaId);
+      if(area){area.name=areaName;area.centerWaypoint=waypointName;area.diameter=diameter;area.color=areaColor;area.info=areaInfo;area.type='circular';drawArea(area);}
+    }else{
+      const id=Date.now()+Math.floor(999*Math.random());
+      const newArea={id,name:areaName,centerWaypoint:waypointName,diameter,color:areaColor,info:areaInfo,type:'circular'};
+      areaVisible[id]=true;
+      areas.push(newArea);drawArea(newArea);
+    }
+    renderAreaList();saveLocal();closeAreaModal();
+  }
+
+  function closeAreaModal(){document.getElementById('areaModal').style.display='none';editingAreaId=null;}
+
+  function deleteArea(areaId){
+    if(confirm('Delete this area?')){
+      areas=areas.filter(a=>a.id!==areaId);
+      if(areaPolygons[areaId]){map.removeLayer(areaPolygons[areaId]);delete areaPolygons[areaId];}
+      delete areaVisible[areaId];
+      renderAreaList();saveLocal();
+    }
+  }
+
+  /* ================================================
+     EXPORT MODAL
+  ================================================ */
+  function showExportModal(){
+    document.getElementById('exportModal').style.display='block';
+    document.getElementById('waypointSelection').style.display='none';
+    document.getElementById('areaSelection').style.display='none';
+    document.querySelectorAll('.export-option').forEach(opt=>opt.classList.remove('selected'));
+    populateWaypointCheckboxes();populateAreaCheckboxes();
+  }
+  function populateWaypointCheckboxes(){
+    const list=document.getElementById('waypointCheckboxList');list.innerHTML='';
+    waypoints.forEach(wp=>{
+      const markerType=MARKER_TYPES[wp.markerType||'default'],div=document.createElement('div');
+      div.className='checkbox-item';
+      div.innerHTML=`<label><input type="checkbox" value="${wp.id}" class="waypoint-checkbox"> <span style="color:${markerType.color};">●</span> <b>${wp.name}</b> - ${formatDMS(wp.lat,true)}, ${formatDMS(wp.lon,false)}</label>`;
+      list.appendChild(div);
+    });
+  }
+  function populateAreaCheckboxes(){
+    const list=document.getElementById('areaCheckboxList');list.innerHTML='';
+    areas.forEach(area=>{
+      const div=document.createElement('div');div.className='checkbox-item';
+      div.innerHTML=`<label><input type="checkbox" value="${area.id}" class="area-checkbox"> <span style="color:${area.color||'#8b45c1'};">●</span> <b>${area.name}</b> - ${area.type==='circular'?'Circular':area.corners.length+' corners'}</label>`;
+      list.appendChild(div);
+    });
+  }
+  document.querySelectorAll('.export-option').forEach(option=>{
+    option.onclick=function(){
+      document.querySelectorAll('.export-option').forEach(o=>o.classList.remove('selected'));this.classList.add('selected');
+      const type=this.dataset.type;
+      document.getElementById('waypointSelection').style.display='none';
+      document.getElementById('areaSelection').style.display='none';
+      if('selected-waypoints'===type)document.getElementById('waypointSelection').style.display='block';
+      else if('selected-areas'===type)document.getElementById('areaSelection').style.display='block';
+      else if('custom'===type){document.getElementById('waypointSelection').style.display='block';document.getElementById('areaSelection').style.display='block';}
+    };
+  });
+  document.getElementById('selectAllWaypoints').onclick=function(){document.querySelectorAll('.waypoint-checkbox').forEach(cb=>cb.checked=true);};
+  document.getElementById('deselectAllWaypoints').onclick=function(){document.querySelectorAll('.waypoint-checkbox').forEach(cb=>cb.checked=false);};
+  document.getElementById('selectAllAreas').onclick=function(){document.querySelectorAll('.area-checkbox').forEach(cb=>cb.checked=true);};
+  document.getElementById('deselectAllAreas').onclick=function(){document.querySelectorAll('.area-checkbox').forEach(cb=>cb.checked=false);};
+  document.getElementById('confirmExportBtn').onclick=function(){
+    const selectedOption=document.querySelector('.export-option.selected');
+    if(!selectedOption)return void alert('Please select an export option');
+    const type=selectedOption.dataset.type;
+    let exportWaypoints=[],exportAreas=[];
+    switch(type){
+      case'all':exportWaypoints=waypoints;exportAreas=areas;break;
+      case'waypoints-only':exportWaypoints=waypoints;break;
+      case'areas-only':exportAreas=areas;break;
+      case'selected-waypoints':{const ids=Array.from(document.querySelectorAll('.waypoint-checkbox:checked')).map(cb=>parseInt(cb.value));if(!ids.length)return void alert('Please select at least one waypoint');exportWaypoints=waypoints.filter(wp=>ids.includes(wp.id));break;}
+      case'selected-areas':{const ids=Array.from(document.querySelectorAll('.area-checkbox:checked')).map(cb=>parseInt(cb.value));if(!ids.length)return void alert('Please select at least one area');exportAreas=areas.filter(area=>ids.includes(area.id));break;}
+      case'custom':{const wpIds=Array.from(document.querySelectorAll('.waypoint-checkbox:checked')).map(cb=>parseInt(cb.value)),areaIds=Array.from(document.querySelectorAll('.area-checkbox:checked')).map(cb=>parseInt(cb.value));if(!wpIds.length&&!areaIds.length)return void alert('Please select at least one item');exportWaypoints=waypoints.filter(wp=>wpIds.includes(wp.id));exportAreas=areas.filter(area=>areaIds.includes(area.id));break;}
+    }
+    const blob=new Blob([JSON.stringify({waypoints:exportWaypoints,areas:exportAreas},null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='waypoints_areas.json';a.click();
+    closeExportModal();
+  };
+  document.getElementById('cancelExportBtn').onclick=closeExportModal;
+  function closeExportModal(){document.getElementById('exportModal').style.display='none';}
+
+  /* ================================================
+     GEOLOCATION
+  ================================================ */
+  async function ensureGeolocationPermission(){
+    if(!('geolocation'in navigator))return alert('Geolocation not supported'),false;
+    if(navigator.permissions&&navigator.permissions.query)try{
+      const status=await navigator.permissions.query({name:'geolocation'});
+      if('granted'===status.state)return true;
+      if('prompt'===status.state)return new Promise(res=>{navigator.geolocation.getCurrentPosition(()=>res(true),()=>res(false),{enableHighAccuracy:true,maximumAge:1000,timeout:10000});});
+      alert('Location permission is denied. Enable location for this site in your browser settings.');return false;
+    }catch(e){}
+    return new Promise(res=>{navigator.geolocation.getCurrentPosition(()=>res(true),()=>res(false),{enableHighAccuracy:true,maximumAge:1000,timeout:10000});});
+  }
+
+  /* ================================================
+     FLY MODE
+  ================================================ */
+  function startFlying(){
+    if(flyMarker)return alert('Already flying');
+    const isLocalhost='localhost'===location.hostname||'127.0.0.1'===location.hostname;
+    if(!('https:'===location.protocol||isLocalhost))return void alert('Geolocation needs HTTPS or localhost. Use your GitHub Pages link.');
+    ensureGeolocationPermission().then(ok=>{
+      if(!ok)return;
+      gpsInfoDiv.style.display='block';
+      flyMarker=L.marker([0,0],{icon:createHelicopterIcon(0)}).addTo(map);
+      flyWatchId=navigator.geolocation.watchPosition(pos=>{
+        const lat=pos.coords.latitude,lon=pos.coords.longitude,
+              speed=1.94384*(pos.coords.speed||0),
+              heading=null!==pos.coords.heading&&undefined!==pos.coords.heading?pos.coords.heading:lastCourseGPS;
+        updateGPSInfo(speed,heading);flyMarker.setLatLng([lat,lon]);
+        coordsOut.textContent=formatDMS(lat,true)+', '+formatDMS(lon,false);
+        map.setView([lat,lon]);updateRouteSummary();
+        if(movingTrackActive)updateMovingTrack();
+      },err=>{alert('Error getting location: '+(err.message||err.code));},{enableHighAccuracy:true,maximumAge:1000});
+    });
+  }
+  function stopFlying(){
+    if(flyWatchId)navigator.geolocation.clearWatch(flyWatchId);
+    if(flyMarker)map.removeLayer(flyMarker);
+    flyMarker=null;flyWatchId=null;gpsInfoDiv.style.display='none';
+    if(movingTrackActive)stopMovingTrack();
+  }
+
+  /* ================================================
+     DIRECT-TO
+  ================================================ */
+  function startDirectTo(){
+    if(!directSelect.value)return alert('Select waypoint first');
+    directTargetId=parseInt(directSelect.value);
+    const isLocalhost='localhost'===location.hostname||'127.0.0.1'===location.hostname;
+    if(!('https:'===location.protocol||isLocalhost))return void alert('Geolocation needs HTTPS or localhost. Use your GitHub Pages link.');
+    ensureGeolocationPermission().then(ok=>{
+      if(!ok)return;
+      gpsInfoDiv.style.display='block';
+      if(directLayer)map.removeLayer(directLayer);
+      directLayer=L.polyline([],{color:'#ff00ff',weight:2,dashArray:'4'}).addTo(map);
+      if(!flyMarker)flyMarker=L.marker([0,0],{icon:createHelicopterIcon(0)}).addTo(map);
+      flyWatchId=navigator.geolocation.watchPosition(pos=>{
+        const lat=pos.coords.latitude,lon=pos.coords.longitude,
+              speed=1.94384*(pos.coords.speed||0),
+              heading=null!==pos.coords.heading&&undefined!==pos.coords.heading?pos.coords.heading:lastCourseGPS;
+        updateGPSInfo(speed,heading);flyMarker.setLatLng([lat,lon]);
+        coordsOut.textContent=formatDMS(lat,true)+', '+formatDMS(lon,false);
+        map.setView([lat,lon]);
+        const target=waypoints.find(w=>w.id===directTargetId);if(!target)return;
+        const dist=haversineNM(lat,lon,target.lat,target.lon),
+              inputSpeed=parseFloat(document.getElementById('speedInput').value)||0,
+              etaInput=inputSpeed>0?(dist/inputSpeed*60).toFixed(1)+' min':'N/A',
+              etaGPS=lastSpeedGPS>0?(dist/lastSpeedGPS*60).toFixed(1)+' min':'N/A',
+              brg=bearing(lat,lon,target.lat,target.lon);
+        routeSummaryDiv.innerHTML=`<b>Direct-To ${target.name}</b><br>Distance: ${dist.toFixed(2)} NM<br>Bearing: ${brg.toFixed(1)}°<br>ETA Input: ${etaInput}<br>ETA GPS: ${etaGPS}`;
+        directLayer.setLatLngs([[lat,lon],[target.lat,target.lon]]);
+        if(movingTrackActive)updateMovingTrack();
+      },err=>{alert('Error getting location: '+(err.message||err.code));},{enableHighAccuracy:true,maximumAge:1000});
+    });
+  }
+  function stopDirectTo(){
+    if(flyWatchId)navigator.geolocation.clearWatch(flyWatchId);
+    if(directLayer)map.removeLayer(directLayer);directLayer=null;directTargetId=null;
+    routeSummaryDiv.innerHTML='';
+    if(flyMarker){map.removeLayer(flyMarker);flyMarker=null;}
+    flyWatchId=null;gpsInfoDiv.style.display='none';
+    if(movingTrackActive)stopMovingTrack();
+  }
+
+  /* ================================================
+     SAVE / LOAD
+  ================================================ */
+/* ================================================
+     SAVED ROUTES FEATURE
+  ================================================ */
+  let savedRoutes = JSON.parse(localStorage.getItem('saved_routes_v1') || '[]');
+
+  function saveAllRoutes() {
+    localStorage.setItem('saved_routes_v1', JSON.stringify(savedRoutes));
+  }
+
+  function updateSaveRouteBtnState() {
+    const btn = document.getElementById('saveRouteBtn');
+    if (selected.length >= 2) {
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+    } else {
+      btn.style.opacity = '0.4';
+      btn.style.pointerEvents = 'none';
+    }
+  }
+
+  function buildRouteLegs(waypointIds) {
+    const legs = [];
+    let totalDist = 0;
+    for (let i = 0; i < waypointIds.length - 1; i++) {
+      const a = waypoints.find(w => w.id === waypointIds[i]);
+      const b = waypoints.find(w => w.id === waypointIds[i + 1]);
+      if (!a || !b) continue;
+      const dist = haversineNM(a.lat, a.lon, b.lat, b.lon);
+      const brg = bearing(a.lat, a.lon, b.lat, b.lon);
+      totalDist += dist;
+      legs.push({ from: a.name, to: b.name, dist: dist.toFixed(2), brg: brg.toFixed(1) });
+    }
+    return { legs, totalDist: totalDist.toFixed(2) };
+  }
+
+  document.getElementById('saveRouteBtn').onclick = function () {
+    if (selected.length < 2) return;
+    document.getElementById('saveRouteNameInput').value = '';
+    document.getElementById('saveRouteModal').style.display = 'block';
+    setTimeout(() => document.getElementById('saveRouteNameInput').focus(), 100);
+  };
+
+  document.getElementById('confirmSaveRouteBtn').onclick = function () {
+    const name = document.getElementById('saveRouteNameInput').value.trim();
+    if (!name) return alert('Please enter a route name');
+    const { legs, totalDist } = buildRouteLegs(selected);
+    const route = {
+      id: Date.now(),
+      name,
+      waypointIds: [...selected],
+      legs,
+      totalDist
+    };
+    savedRoutes.push(route);
+    saveAllRoutes();
+    document.getElementById('saveRouteModal').style.display = 'none';
+    alert('Route "' + name + '" saved!');
+  };
+
+  document.getElementById('cancelSaveRouteBtn').onclick = function () {
+    document.getElementById('saveRouteModal').style.display = 'none';
+  };
+
+  document.getElementById('saveRouteNameInput').addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') document.getElementById('confirmSaveRouteBtn').click();
+  });
+
+  document.getElementById('showSavedRoutesBtn').onclick = function () {
+    renderSavedRoutesList();
+    document.getElementById('savedRoutesModal').style.display = 'block';
+  };
+
+  document.getElementById('closeSavedRoutesBtn').onclick = function () {
+    document.getElementById('savedRoutesModal').style.display = 'none';
+  };
+
+  function renderSavedRoutesList() {
+    const content = document.getElementById('savedRoutesContent');
+    content.innerHTML = '';
+    if (savedRoutes.length === 0) {
+      content.innerHTML = '<p style="text-align:center;color:var(--text-dim);font-family:var(--font-mono)">No saved routes yet</p>';
+      return;
+    }
+    savedRoutes.forEach(route => {
+      const div = document.createElement('div');
+      div.className = 'saved-route-item';
+      let legsHTML = '';
+      route.legs.forEach((leg, i) => {
+        legsHTML += `<div>Leg ${i + 1}: <b style="color:var(--text-bright)">${leg.from} → ${leg.to}</b> &nbsp; ${leg.dist} NM &nbsp; BRG: ${leg.brg}°</div>`;
+      });
+      div.innerHTML = `
+        <div class="route-name">📍 ${route.name}</div>
+        <div class="route-legs">${legsHTML}</div>
+        <div class="route-total">Total Distance: ${route.totalDist} NM</div>
+        <div class="btn-row">
+          <a class="btn small btn-amber" onclick="editSavedRoute(${route.id})">✏️ EDIT NAME</a>
+          <a class="btn small btn-blue" onclick="showSavedRouteOnMap(${route.id})">🗺️ SHOW ON MAP</a>
+          <a class="btn small btn-red" onclick="deleteSavedRoute(${route.id})">🗑 DELETE</a>
+        </div>`;
+      content.appendChild(div);
+    });
+  }
+
+  window.editSavedRoute = function (id) {
+    const route = savedRoutes.find(r => r.id === id);
+    if (!route) return;
+    const newName = prompt('Rename route:', route.name);
+    if (newName && newName.trim()) {
+      route.name = newName.trim();
+      saveAllRoutes();
+      renderSavedRoutesList();
+    }
+  };
+
+  window.showSavedRouteOnMap = function (id) {
+    const route = savedRoutes.find(r => r.id === id);
+    if (!route) return;
+    // Try to load waypoints by matching IDs that still exist
+    const availableIds = route.waypointIds.filter(wid => waypoints.find(w => w.id === wid));
+    if (availableIds.length < 2) {
+      return alert('The waypoints for this route are no longer in the system. Please re-add them.');
+    }
+    // Set selected to these IDs and draw the route
+    selected = [...availableIds];
+    makeRoute();
+    document.getElementById('savedRoutesModal').style.display = 'none';
+    // Fit map to route
+    const latlngs = availableIds.map(wid => {
+      const wp = waypoints.find(w => w.id === wid);
+      return [wp.lat, wp.lon];
+    });
+    map.fitBounds(latlngs, { padding: [40, 40] });
+  };
+
+  window.deleteSavedRoute = function (id) {
+    if (!confirm('Delete this saved route?')) return;
+    savedRoutes = savedRoutes.filter(r => r.id !== id);
+    saveAllRoutes();
+    renderSavedRoutesList();
+  };
+  function saveLocal(){
+    try{
+      localStorage.setItem('map_waypoints_v6',JSON.stringify(waypoints));
+      localStorage.setItem('map_areas_v3',JSON.stringify(areas));
+      localStorage.setItem('map_area_visible',JSON.stringify(areaVisible)); 
+    }catch(e){alert('Error saving data: '+e.message);}
+  }
+  function loadLocal(){
+    const data=localStorage.getItem('map_waypoints_v6');
+    if(data)try{const arr=JSON.parse(data);arr.forEach(w=>addWaypointNoSave(w.lat,w.lon,w.name,w.markerType||'default',w.info||''));}catch(e){}
+    // Restore saved visibility states
+    const savedVis=localStorage.getItem('map_area_visible');
+    const restoredVis=savedVis?JSON.parse(savedVis):{};
+    const areaData=localStorage.getItem('map_areas_v3');
+    if(areaData)try{
+      const loadedAreas=JSON.parse(areaData);
+      loadedAreas.forEach(area=>{
+        area.color||(area.color=area.type==='circular'?'#ff0000':'#8b45c1');
+        area.info||(area.info='');area.type||(area.type='polygon');
+        // Use restored visibility; default true only if no saved state exists
+        areaVisible[area.id]=(restoredVis[area.id]!==undefined)?restoredVis[area.id]:true;
+  areas.push(area); // always load into data
+        if(areaVisible[area.id])drawArea(area); // only draw if visible
+      });
+      renderAreaList();
+    }catch(e){alert('Error loading areas: '+e.message);}
+  }
+
+  /* ================================================
+     BUTTON BINDINGS
+  ================================================ */
+  recenterBtn.onclick=()=>{flyMarker?map.setView(flyMarker.getLatLng()):alert('Flying or Direct-To mode not active');};
+  document.getElementById('goBtn').onclick=()=>{
+    const latDeg=parseFloat(document.getElementById('latDeg').value),latMin=parseFloat(document.getElementById('latMin').value),
+          latDir=document.getElementById('latDir').value,lonDeg=parseFloat(document.getElementById('lonDeg').value),
+          lonMin=parseFloat(document.getElementById('lonMin').value),lonDir=document.getElementById('lonDir').value;
+    if(isNaN(latDeg)||isNaN(latMin)||isNaN(lonDeg)||isNaN(lonMin))return void alert('Invalid coordinates');
+    const lat=DMSToDecimal(latDeg,latMin,latDir),lon=DMSToDecimal(lonDeg,lonMin,lonDir);
+    map.setView([lat,lon],Math.max(map.getZoom(),12));addWaypoint(lat,lon,'Manual');
+  };
+document.getElementById('routeBtn').onclick=()=>{makeRoute();updateSaveRouteBtnState();};
+  document.getElementById('clearRouteBtn').onclick=()=>{clearRoute();updateSaveRouteBtnState();};
+  document.getElementById('saveBtn').onclick=()=>{saveLocal();alert('Saved waypoints and areas!');};
+  document.getElementById('exportBtn').onclick=showExportModal;
+  document.getElementById('importBtn').onclick=()=>{
+    try{
+      const importData=JSON.parse(document.getElementById('jsonArea').value);
+      if(importData.waypoints)importData.waypoints.forEach(w=>addWaypoint(w.lat,w.lon,w.name,w.markerType||'default',w.info||''));
+      if(importData.areas){
+        importData.areas.forEach(area=>{
+          area.color||(area.color=area.type==='circular'?'#ff0000':'#8b45c1');
+          area.info||(area.info='');area.type||(area.type='polygon');
+          area.id||(area.id=Date.now()+Math.floor(999*Math.random()));
+          areaVisible[area.id]=true;
+          areas.push(area);drawArea(area);
+        });renderAreaList();
+      }
+      saveLocal();alert('Imported successfully');
+    }catch(e){alert('Invalid JSON: '+e.message);}
+  };
+  document.getElementById('startFlyBtn').onclick=startFlying;
+  document.getElementById('stopFlyBtn').onclick=stopFlying;
+  document.getElementById('startDirectBtn').onclick=startDirectTo;
+  document.getElementById('stopDirectBtn').onclick=stopDirectTo;
+  document.getElementById('createAreaBtn').onclick=()=>showAreaModal(false);
+  document.getElementById('setCornerBtn').onclick=()=>{
+    const numCorners=parseInt(document.getElementById('numCorners').value);
+    if(isNaN(numCorners)||numCorners<3)return void alert('Please enter at least 3 corners');
+    createCornerInputs(numCorners);
+  };
+  document.getElementById('saveAreaBtn').onclick=saveArea;
+  document.getElementById('saveCircularAreaBtn').onclick=saveCircularArea;
+  document.getElementById('cancelAreaBtn').onclick=closeAreaModal;
+  document.getElementById('cancelCircularAreaBtn').onclick=closeAreaModal;
+  document.getElementById('editAreaBtn').onclick=()=>{
+    const areaId=parseInt(editAreaSelect.value);
+    if(!areaId)return void alert('Please select an area to edit');showAreaModal(true,areaId);
+  };
+  document.getElementById('deleteAreaBtn').onclick=()=>{
+    const areaId=parseInt(deleteAreaSelect.value);
+    if(!areaId)return void alert('Please select an area to delete');deleteArea(areaId);
+  };
+/* ================================================
+     PRINT FLIGHT BRIEF
+  ================================================ */
+  document.getElementById('printBriefBtn').onclick=function(){
+    document.getElementById('briefModal').style.display='block';
+  };
+  document.getElementById('closeBriefBtn').onclick=function(){
+    document.getElementById('briefModal').style.display='none';
+  };
+  window.calcEndurance=function(){
+    const fuel=parseFloat(document.getElementById('bf_fuel').value)||0;
+    const rate=parseFloat(document.getElementById('bf_fuelrate').value)||0;
+    if(fuel>0&&rate>0){
+      const hrs=fuel/rate;
+      const h=Math.floor(hrs);const m=Math.round((hrs-h)*60);
+      document.getElementById('bf_endurance').value=h+'h '+m+'min';
+    }else{
+      document.getElementById('bf_endurance').value='';
+    }
+  };
+  document.getElementById('doPrintBriefBtn').onclick=function(){
+    // Gather brief fields
+    const g=id=>document.getElementById(id).value||'—';
+    const now=new Date();
+    const dtStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+
+      '  '+now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+'L';
+
+    // Build route table rows from current selected waypoints & route
+    const speedInput=parseFloat(document.getElementById('speedInput').value)||0;
+    let routeRows='';
+    let totalDist=0,totalTime=0;
+    if(selected.length>=2){
+      for(let i=0;i<selected.length-1;i++){
+        const a=waypoints.find(w=>w.id===selected[i]);
+        const b=waypoints.find(w=>w.id===selected[i+1]);
+        const dist=haversineNM(a.lat,a.lon,b.lat,b.lon);
+        const brg=bearing(a.lat,a.lon,b.lat,b.lon);
+        const t=speedInput>0?dist/speedInput*60:0;
+        totalDist+=dist;totalTime+=t;
+        const etaStr=speedInput>0?t.toFixed(0)+' min':'N/A';
+        routeRows+=`<tr>
+          <td>${i+1}</td>
+          <td><b>${a.name}</b></td>
+          <td><b>${b.name}</b></td>
+          <td>${formatDMS(a.lat,true)}<br>${formatDMS(a.lon,false)}</td>
+          <td>${formatDMS(b.lat,true)}<br>${formatDMS(b.lon,false)}</td>
+          <td>${dist.toFixed(2)}</td>
+          <td>${brg.toFixed(1)}°</td>
+          <td>${etaStr}</td>
+        </tr>`;
+      }
+      routeRows+=`<tr style="background:#f0f0f0;font-weight:700">
+        <td colspan="5" style="text-align:right">TOTAL</td>
+        <td>${totalDist.toFixed(2)} NM</td>
+        <td>—</td>
+        <td>${speedInput>0?totalTime.toFixed(0)+' min':'N/A'}</td>
+      </tr>`;
+    }else{
+      routeRows='<tr><td colspan="8" style="text-align:center;color:#888">No route selected on map</td></tr>';
+    }
+
+    const briefHTML=`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Flight Brief - ${g('bf_callsign')}</title>
+    <style>
+      body{font-family:'Arial',sans-serif;font-size:12px;color:#000;margin:0;padding:20px;background:#fff}
+      h1{text-align:center;font-size:17px;letter-spacing:2px;margin:0 0 2px;border-bottom:3px solid #000;padding-bottom:6px}
+      .meta{text-align:center;font-size:10px;color:#555;margin-bottom:14px}
+      .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #000;margin-bottom:12px}
+      .cell{border:1px solid #aaa;padding:5px 8px}
+      .cell .lbl{font-size:9px;font-weight:700;letter-spacing:1px;color:#555;text-transform:uppercase}
+      .cell .val{font-size:12px;font-weight:600;margin-top:1px}
+      .wx-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #000;margin-bottom:12px}
+      h2{font-size:11px;letter-spacing:2px;background:#222;color:#fff;padding:4px 10px;margin:10px 0 0}
+      table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px}
+      th{background:#333;color:#fff;padding:5px 6px;text-align:center;font-size:10px;letter-spacing:0.5px}
+      td{border:1px solid #ccc;padding:4px 6px;text-align:center;vertical-align:middle}
+      tr:nth-child(even)td{background:#f7f7f7}
+      .notam{border:1px solid #000;padding:8px;min-height:50px;font-size:11px;margin-bottom:12px;white-space:pre-wrap}
+      .credit{text-align:center;font-size:9px;color:#777;margin-top:18px;border-top:1px solid #ccc;padding-top:6px;letter-spacing:1.5px}
+      @media print{body{padding:10px}button{display:none!important}}
+    </style></head><body>
+    <h1>FLIGHT BRIEFING SHEET</h1>
+    <div class="meta">Generated: ${dtStr}</div>
+
+    <h2>MISSION DETAILS</h2>
+    <div class="grid">
+      <div class="cell"><div class="lbl">Callsign</div><div class="val">${g('bf_callsign')}</div></div>
+      <div class="cell"><div class="lbl">Aircraft</div><div class="val">${g('bf_aircraft')}</div></div>
+      <div class="cell"><div class="lbl">Mission</div><div class="val">${g('bf_mission')}</div></div>
+      <div class="cell"><div class="lbl">Pilot</div><div class="val">${g('bf_pilot')}</div></div>
+      <div class="cell"><div class="lbl">Co-Pilot</div><div class="val">${g('bf_copilot')}</div></div>
+      <div class="cell"><div class="lbl">Rear Crew</div><div class="val">${g('bf_rearcrew')}</div></div>
+      <div class="cell"><div class="lbl">ETD</div><div class="val">${g('bf_etd')}</div></div>
+      <div class="cell"><div class="lbl">Duration</div><div class="val">${g('bf_duration')} min</div></div>
+      <div class="cell"><div class="lbl">AUW</div><div class="val">${g('bf_auw')} kg</div></div>
+      <div class="cell"><div class="lbl">Altitude</div><div class="val">${g('bf_altitude')}</div></div>
+      <div class="cell"><div class="lbl">Fuel Taken</div><div class="val">${g('bf_fuel')} ltr</div></div>
+      <div class="cell"><div class="lbl">Endurance</div><div class="val">${g('bf_endurance')}</div></div>
+      <div class="cell"><div class="lbl">Cons Rate</div><div class="val">${g('bf_fuelrate')} ltr/hr</div></div>
+      <div class="cell"><div class="lbl">Frequencies</div><div class="val">${g('bf_freq')}</div></div>
+    </div>
+
+    <h2>WEATHER</h2>
+    <div class="wx-grid">
+      <div class="cell"><div class="lbl">Airfield State</div><div class="val">${g('bf_wx_airfield')}</div></div>
+      <div class="cell"><div class="lbl">Dep Visibility</div><div class="val">${g('bf_wx_depvis')}</div></div>
+      <div class="cell"><div class="lbl">Dest Visibility</div><div class="val">${g('bf_wx_destvis')}</div></div>
+      <div class="cell"><div class="lbl">Cloud</div><div class="val">${g('bf_wx_cloud')}</div></div>
+      <div class="cell"><div class="lbl">Wind</div><div class="val">${g('bf_wx_wind')}</div></div>
+      <div class="cell"><div class="lbl">Weather Warning</div><div class="val">${g('bf_wx_warn')}</div></div>
+    </div>
+
+    <h2>ROUTE PLAN</h2>
+    <table>
+      <thead><tr>
+        <th>#</th><th>FROM</th><th>TO</th><th>FROM COORDS</th><th>TO COORDS</th>
+        <th>DIST (NM)</th><th>BRG</th><th>ETA</th>
+      </tr></thead>
+      <tbody>${routeRows}</tbody>
+    </table>
+
+    <h2>NOTAM</h2>
+    <div class="notam">${g('bf_notam').replace(/\n/g,'<br>')}</div>
+
+    <h2>SPECIAL NOTE</h2>
+    <div class="notam" style="min-height:35px">${g('bf_special').replace(/\n/g,'<br>')}</div>
+
+    <div class="credit">SLAP-GAP &nbsp;|&nbsp; LT CDR SADMAN &nbsp;|&nbsp; P NO 3223 &nbsp;|&nbsp; Air Nav Pro</div>
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`;
+
+    const w=window.open('','_blank','width=900,height=700');
+    w.document.write(briefHTML);
+    w.document.close();
+  };
+  /* ================================================
+     PRE-FLIGHT TILE PRE-CACHER
+  ================================================ */
+  (function(){
+    // --- State ---
+    let cacheRect = null;       // Leaflet rectangle on map
+    let cacheBounds = null;     // LatLngBounds of drawn area
+    let drawingCache = false;
+    let drawStart = null;
+    let selectedZooms = [12, 13, 14];
+    let cacheLayerOSM = true;
+    let cacheLayerSat = true;
+    let abortCache = false;
+
+// --- Tile math helpers ---
+    // Add 0.5 tile padding on each edge to ensure boundary tiles are always included
+function lon2tileFloor(lon, zoom){
+      return Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
+    }
+    function lon2tileCeil(lon, zoom){
+      return Math.ceil((lon + 180) / 360 * Math.pow(2, zoom));
+    }
+    function lat2tileFloor(lat, zoom){
+      const rad = lat * Math.PI / 180;
+      return Math.floor((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * Math.pow(2, zoom));
+    }
+    function lat2tileCeil(lat, zoom){
+      const rad = lat * Math.PI / 180;
+      return Math.ceil((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * Math.pow(2, zoom));
+    }
+
+    function getTileBounds(bounds, z){
+      const maxTile = Math.pow(2, z) - 1;
+      // West edge: floor (start of tile column)
+      // East edge: ceil  (include the tile that contains the east boundary)
+      // North = smaller Y: floor
+      // South = larger Y: ceil (include the tile that contains the south boundary)
+      return {
+        x0: Math.max(0,       lon2tileFloor(bounds.getWest(),  z)),
+        x1: Math.min(maxTile, lon2tileCeil (bounds.getEast(),  z)),
+        y0: Math.max(0,       lat2tileFloor(bounds.getNorth(), z)),
+        y1: Math.min(maxTile, lat2tileCeil (bounds.getSouth(), z))
+      };
+    }
+
+    function countTiles(bounds, zooms){
+      let total = 0;
+      zooms.forEach(z => {
+        const {x0, x1, y0, y1} = getTileBounds(bounds, z);
+        total += (x1 - x0 + 1) * (y1 - y0 + 1);
+      });
+      return total;
+    }
+
+    function buildTileList(bounds, zooms, osm, sat){
+      // Returns array of {url, cacheName} objects
+      // cacheName must match exactly what sw.js uses so tiles are shared
+      const OSM_CACHE  = 'tiles-v2';       // must match sw.js TILE_CACHE
+      const SAT_CACHE  = 'satellite-v2';   // must match sw.js SATELLITE_CACHE
+      const list = [];
+      const subdomains = ['a','b','c'];
+      let sdIdx = 0;
+      zooms.forEach(z => {
+        const {x0, x1, y0, y1} = getTileBounds(bounds, z);
+        for(let x = x0; x <= x1; x++){
+          for(let y = y0; y <= y1; y++){
+            if(osm){
+              const s = subdomains[sdIdx % 3]; sdIdx++;
+              list.push({
+                url: `https://${s}.tile.openstreetmap.org/${z}/${x}/${y}.png`,
+                cacheName: OSM_CACHE
+              });
+            }
+            if(sat){
+              list.push({
+                url: `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
+                cacheName: SAT_CACHE
+              });
+            }
+          }
+        }
+      });
+      return list;
+    }
+
+    // --- Zoom toggle grid ---
+    const zoomGrid = document.getElementById('zoomToggleGrid');
+    [9,10,11,12,13,14,15].forEach(z => {
+      const btn = document.createElement('div');
+      btn.className = 'zoom-btn' + (selectedZooms.includes(z) ? ' active' : '');
+      btn.textContent = 'Z' + z;
+      btn.onclick = function(){
+        if(selectedZooms.includes(z)){
+          if(selectedZooms.length === 1) return; // keep at least one
+          selectedZooms = selectedZooms.filter(x => x !== z);
+          btn.classList.remove('active');
+        } else {
+          selectedZooms.push(z);
+          selectedZooms.sort((a,b)=>a-b);
+          btn.classList.add('active');
+        }
+        updateEstimate();
+      };
+      zoomGrid.appendChild(btn);
+    });
+
+    window.toggleCacheLayer = function(layer){
+      if(layer === 'osm'){
+        cacheLayerOSM = !cacheLayerOSM;
+        document.getElementById('layerBtnOSM').classList.toggle('active', cacheLayerOSM);
+      } else {
+        cacheLayerSat = !cacheLayerSat;
+        document.getElementById('layerBtnSat').classList.toggle('active', cacheLayerSat);
+      }
+      updateEstimate();
+    };
+
+    function updateEstimate(){
+      if(!cacheBounds){ return; }
+      const osmCount = cacheLayerOSM ? countTiles(cacheBounds, selectedZooms) : 0;
+      const satCount = cacheLayerSat ? countTiles(cacheBounds, selectedZooms) : 0;
+      const total = osmCount + satCount;
+      const osmMB = (osmCount * 20 / 1024).toFixed(1); // ~20KB avg OSM tile
+      const satMB = (satCount * 80 / 1024).toFixed(1); // ~80KB avg satellite tile
+      const totalMB = ((osmCount * 20 + satCount * 80) / 1024).toFixed(1);
+      const estMin = Math.ceil(total / 60); // ~60 tiles/sec on WiFi
+
+      const el = document.getElementById('cacheEstimate');
+      if(total === 0){
+        el.textContent = 'Select at least one layer';
+        setDownloadReady(false);
+        return;
+      }
+      el.innerHTML =
+        (cacheLayerOSM ? `🗺️ Normal: ~${osmCount} tiles (~${osmMB} MB)<br>` : '') +
+        (cacheLayerSat ? `🛰️ Satellite: ~${satCount} tiles (~${satMB} MB)<br>` : '') +
+        `📦 Total: ~${total} tiles · ~${totalMB} MB<br>` +
+        `⏱️ Est. time: ~${estMin} min on WiFi`;
+
+      setDownloadReady(true);
+    }
+
+    function setDownloadReady(ready){
+      const btn = document.getElementById('startDownloadBtn');
+      btn.style.opacity = ready ? '1' : '0.4';
+      btn.style.pointerEvents = ready ? 'auto' : 'none';
+    }
+
+    // --- Draw rectangle on map ---
+    document.getElementById('startCacheDrawBtn').onclick = function(){
+      document.getElementById('cacheAreaModal').style.display = 'block';
+    };
+
+document.getElementById('drawCacheRectBtn').onclick = function(){
+      document.getElementById('cacheAreaModal').style.display = 'none';
+      document.getElementById('cacheDrawHint').style.display = 'block';
+      drawingCache = true;
+      map.getContainer().style.cursor = 'crosshair';
+
+      // Remove old rect
+      if(cacheRect){ map.removeLayer(cacheRect); cacheRect = null; cacheBounds = null; }
+
+      // Disable map interaction so finger drag draws rect, not pans map
+      map.dragging.disable();
+      map.touchZoom.disable();
+      map.doubleClickZoom.disable();
+      map.scrollWheelZoom.disable();
+
+      const container = map.getContainer();
+
+      // Convert a page-coordinate point to Leaflet LatLng
+      function pagePointToLatLng(pageX, pageY){
+        const rect = container.getBoundingClientRect();
+        return map.containerPointToLatLng(
+          L.point(pageX - rect.left, pageY - rect.top)
+        );
+      }
+
+      function onPointerDown(e){
+        // Works for both touch and mouse via pointer events
+        const px = e.touches ? e.touches[0].clientX : e.clientX;
+        const py = e.touches ? e.touches[0].clientY : e.clientY;
+        drawStart = pagePointToLatLng(px, py);
+
+        if(cacheRect){ map.removeLayer(cacheRect); }
+        cacheRect = L.rectangle([drawStart, drawStart], {
+          className: 'cache-draw-rect', weight:2, interactive: false
+        }).addTo(map);
+
+        container.addEventListener('touchmove', onPointerMove, { passive: false });
+        container.addEventListener('mousemove', onPointerMove);
+        container.addEventListener('touchend', onPointerUp, { once: true });
+        container.addEventListener('mouseup', onPointerUp, { once: true });
+        e.preventDefault();
+      }
+
+      function onPointerMove(e){
+        if(!drawStart) return;
+        e.preventDefault();
+        const px = e.touches ? e.touches[0].clientX : e.clientX;
+        const py = e.touches ? e.touches[0].clientY : e.clientY;
+        const current = pagePointToLatLng(px, py);
+        cacheRect.setBounds(L.latLngBounds(drawStart, current));
+      }
+
+      function onPointerUp(e){
+        container.removeEventListener('touchmove', onPointerMove);
+        container.removeEventListener('mousemove', onPointerMove);
+        container.removeEventListener('touchstart', onPointerDown);
+        container.removeEventListener('mousedown', onPointerDown);
+
+        // Re-enable map interaction
+        map.dragging.enable();
+        map.touchZoom.enable();
+        map.doubleClickZoom.enable();
+        map.scrollWheelZoom.enable();
+
+        if(!cacheRect) return;
+        cacheBounds = cacheRect.getBounds();
+        drawingCache = false;
+        map.getContainer().style.cursor = '';
+        updateEstimate();
+
+        // Reopen modal
+        document.getElementById('cacheAreaModal').style.display = 'block';
+        document.getElementById('cacheDrawHint').style.display = 'none';
+      }
+
+      container.addEventListener('touchstart', onPointerDown, { passive: false });
+      container.addEventListener('mousedown', onPointerDown);
+    };
+
+    document.getElementById('cancelCacheModalBtn').onclick = function(){
+      document.getElementById('cacheAreaModal').style.display = 'none';
+      document.getElementById('cacheStep1').style.display = 'block';
+      document.getElementById('cacheStep2').style.display = 'none';
+      document.getElementById('cacheStep3').style.display = 'none';
+    };
+
+    // --- Download ---
+    document.getElementById('startDownloadBtn').onclick = async function(){
+      const name = document.getElementById('cacheAreaNameInput').value.trim() ||
+        'Cache ' + new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+
+const tiles = buildTileList(cacheBounds, selectedZooms, cacheLayerOSM, cacheLayerSat);
+      if(tiles.length === 0){ alert('No tiles to download. Check layers and zoom selection.'); return; }
+
+      document.getElementById('cacheStep1').style.display = 'none';
+      document.getElementById('cacheStep2').style.display = 'block';
+      document.getElementById('cacheStep3').style.display = 'none';
+      abortCache = false;
+
+      const progressFill = document.getElementById('cacheProgressFill');
+      const progressText = document.getElementById('cacheProgressText');
+      const statusText = document.getElementById('cacheStatusText');
+
+let done = 0, failed = 0, skipped = 0;
+      const BATCH = 3; // 3 parallel — safe for OSM rate limits
+
+      statusText.textContent = `Caching ${tiles.length} tiles...`;
+
+      // Open both caches directly — bypasses SW interception issues on iOS
+      const cacheHandles = {};
+      async function getCache(name){
+        if(!cacheHandles[name]) cacheHandles[name] = await caches.open(name);
+        return cacheHandles[name];
+      }
+
+     async function fetchAndCache(tile){
+        const cache = await getCache(tile.cacheName);
+        const existing = await cache.match(tile.url);
+        if(existing){ skipped++; return true; }
+        try {
+          const response = await fetch(tile.url, {
+            mode: 'cors',
+            credentials: 'omit',
+            cache: 'no-store'
+          });
+          if(response.ok){
+            await cache.put(tile.url, response.clone());
+            done++;
+            return true;
+          }
+          return false;
+        } catch(err) {
+          return false;
+        }
+      }
+
+for(let i = 0; i < tiles.length; i++){
+        if(abortCache) break;
+
+        // Try fetching the tile
+        let ok = await fetchAndCache(tiles[i]);
+
+        // If it failed, wait 300ms then try once more
+        if(!ok){
+          await new Promise(res => setTimeout(res, 300));
+          ok = await fetchAndCache(tiles[i]);
+          if(!ok) failed++;
+        }
+
+        const pct = Math.round((done + failed + skipped) / tiles.length * 100);
+        progressFill.style.width = pct + '%';
+        progressText.textContent = `${done} new · ${skipped} already cached · ${failed} failed  —  ${pct}%`;
+
+        // 50ms pause between each tile
+        await new Promise(res => setTimeout(res, 50));
+      }
+
+      // Save to localStorage record
+      const record = {
+        id: Date.now(),
+        name: name,
+      tiles: done + skipped,
+        zooms: selectedZooms.join(','),
+        layers: (cacheLayerOSM?'OSM ':'') + (cacheLayerSat?'SAT':''),
+        date: new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),
+        bounds: {
+          n: cacheBounds.getNorth().toFixed(4),
+          s: cacheBounds.getSouth().toFixed(4),
+          e: cacheBounds.getEast().toFixed(4),
+          w: cacheBounds.getWest().toFixed(4)
+        }
+      };
+      saveCachedAreaRecord(record);
+      renderCachedAreasList();
+
+      document.getElementById('cacheStep2').style.display = 'none';
+      document.getElementById('cacheStep3').style.display = 'block';
+      document.getElementById('cacheDoneText').textContent =
+        `✓ ${done} tiles cached · ${failed} failed · ${record.layers} · Z${record.zooms}`;
+    };
+
+    document.getElementById('abortCacheBtn').onclick = function(){
+      abortCache = true;
+      document.getElementById('cacheStatusText').textContent = 'Aborting...';
+    };
+
+    document.getElementById('closeCacheDoneBtn').onclick = function(){
+      document.getElementById('cacheAreaModal').style.display = 'none';
+      document.getElementById('cacheStep1').style.display = 'block';
+      document.getElementById('cacheStep2').style.display = 'none';
+      document.getElementById('cacheStep3').style.display = 'none';
+    };
+
+    // --- Cached areas localStorage record ---
+    function saveCachedAreaRecord(record){
+      const existing = JSON.parse(localStorage.getItem('cachedAreaRecords') || '[]');
+      existing.push(record);
+      localStorage.setItem('cachedAreaRecords', JSON.stringify(existing));
+    }
+
+function deleteCachedAreaRecord(id){
+      const existing = JSON.parse(localStorage.getItem('cachedAreaRecords') || '[]');
+      localStorage.setItem('cachedAreaRecords', JSON.stringify(existing.filter(r => r.id !== id)));
+      // Remove the rectangle from the map if it belongs to this record
+      if(cacheRect){ map.removeLayer(cacheRect); cacheRect = null; cacheBounds = null; }
+      renderCachedAreasList();
+    }
+
+    function renderCachedAreasList(){
+      const container = document.getElementById('cachedAreasList');
+      const records = JSON.parse(localStorage.getItem('cachedAreaRecords') || '[]');
+      if(records.length === 0){
+        container.innerHTML = '<div class="cached-area-empty">No cached areas yet</div>';
+        return;
+      }
+      container.innerHTML = '';
+      [...records].reverse().forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'cached-area-item';
+        item.innerHTML = `
+          <div style="flex:1;min-width:0">
+            <div class="cached-area-name">📦 ${r.name}</div>
+            <div class="cached-area-meta">${r.tiles} tiles · ${r.layers} · Z${r.zooms} · ${r.date}</div>
+          </div>
+          <a class="btn small btn-red" style="flex-shrink:0" onclick="deleteCachedAreaRecord(${r.id})">🗑</a>`;
+        container.appendChild(item);
+      });
+    }
+
+    window.deleteCachedAreaRecord = deleteCachedAreaRecord;
+    renderCachedAreasList();
+
+    // --- Sidebar accordion toggles ---
+    document.getElementById('cacheMenuToggle').onclick = function(){
+      const panel = document.getElementById('cacheMenuPanel');
+      const arrow = document.getElementById('cacheMenuArrow');
+      const open = panel.style.display === 'block';
+      panel.style.display = open ? 'none' : 'block';
+      arrow.textContent = open ? '▶ EXPAND' : '▼ COLLAPSE';
+    };
+
+    document.getElementById('cachedAreasToggle').onclick = function(){
+      const panel = document.getElementById('cachedAreasPanel');
+      const arrow = document.getElementById('cachedAreasArrow');
+      const open = panel.style.display === 'block';
+      panel.style.display = open ? 'none' : 'block';
+      arrow.textContent = open ? '▶ SHOW' : '▼ HIDE';
+    };
+
+  })(); // end pre-flight cache IIFE
+  loadLocal();
+}
+
+/* ====================================================
+   SERVICE WORKER
+==================================================== */
+if('serviceWorker'in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg=>console.log('SW registered',reg.scope))
+      .catch(err=>console.error('SW registration failed',err));
+  });
+}
+// Dual clock — GMT and BD (UTC+6)
+(function(){
+  function updateClocks(){
+    const now=new Date();
+    const pad=n=>String(n).padStart(2,'0');
+    const gmtH=pad(now.getUTCHours()),gmtM=pad(now.getUTCMinutes()),gmtS=pad(now.getUTCSeconds());
+    document.getElementById('clockGMT').textContent=gmtH+':'+gmtM+':'+gmtS+'Z';
+    const bdOffset=6*60;
+    const bdTotal=now.getUTCHours()*60+now.getUTCMinutes()+bdOffset;
+    const bdH=pad(Math.floor(bdTotal/60)%24),bdM=pad(now.getUTCMinutes()),bdS=pad(now.getUTCSeconds());
+    document.getElementById('clockBD').textContent=bdH+':'+bdM+':'+bdS+'L';
+  }
+  updateClocks();
+  setInterval(updateClocks,1000);
+})();
+  // Area visibility accordion
+document.getElementById('areaVisToggle').onclick=function(){
+  const panel=document.getElementById('areaVisPanel');
+  const arrow=document.getElementById('areaVisArrow');
+  const open=panel.style.display==='block';
+  panel.style.display=open?'none':'block';
+  arrow.textContent=open?'▶ EXPAND':'▼ COLLAPSE';
+};
+checkAuthentication();
+</script>
+
+<!-- Dark Leaflet overrides -->
+<style>
+.leaflet-popup-content-wrapper{background:var(--bg-panel) !important;border:1px solid var(--border-glow) !important;color:var(--text-primary) !important;border-radius:8px !important;box-shadow:0 4px 20px rgba(0,0,0,0.6) !important}
+.leaflet-popup-tip{background:var(--bg-panel) !important}
+.leaflet-popup-content{font-family:var(--font-ui);font-size:13px;margin:10px 14px}
+.leaflet-tooltip{background:rgba(4,8,15,0.92) !important;border:1px solid var(--border-glow) !important;color:var(--text-primary) !important;font-family:var(--font-mono) !important;font-size:11px !important}
+.leaflet-control-zoom a{background:var(--bg-panel) !important;color:var(--accent-cyan) !important;border-color:var(--border-glow) !important}
+.leaflet-control-zoom a:hover{background:var(--bg-elevated) !important}
+.leaflet-bar{border:1px solid var(--border-glow) !important}
+.leaflet-control-attribution{background:rgba(4,8,15,0.7) !important;color:var(--text-dim) !important;font-size:9px !important}
+.leaflet-control-attribution a{color:var(--text-dim) !important}
+</style>
+</body>
+</html>
