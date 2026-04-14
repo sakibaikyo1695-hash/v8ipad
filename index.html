@@ -1828,7 +1828,9 @@ function renderWaypointListFiltered(filter){
     let marker='circle'===markerType.shape
       ?L.circleMarker([wp.lat,wp.lon],{radius:5,color:markerType.color,fillColor:markerType.color,fillOpacity:.9,weight:2}).addTo(map)
       :L.marker([wp.lat,wp.lon],{icon:createMarkerIcon(wp.markerType||'default')}).addTo(map);
-    const popupContent=`<b style="font-family:'Rajdhani',sans-serif;color:#e8f4ff">${wp.name}</b><br><span style="color:#7899b8;font-family:'Share Tech Mono',monospace;font-size:11px">${formatDMS(wp.lat,true)}, ${formatDMS(wp.lon,false)}</span><br><span style="color:#0af;font-size:11px">${markerType.label}</span>${wp.info?'<br><i style="color:#aaa;font-size:11px">'+wp.info+'</i>':''}<br><a href="#" onclick="editWaypoint(${wp.id})" style="color:#00e5ff">Edit</a>`;
+const plateCount=(wp.plates||[]).length;
+    const platesPopupBtn=plateCount>0?`<br><a href="#" onclick="openPlateViewer(${wp.id})" style="color:var(--accent-amber);font-size:12px">📄 ${plateCount} Plate(s)</a>`:'';
+    const popupContent=`<b style="font-family:'Rajdhani',sans-serif;color:#e8f4ff">${wp.name}</b><br><span style="color:#7899b8;font-family:'Share Tech Mono',monospace;font-size:11px">${formatDMS(wp.lat,true)}, ${formatDMS(wp.lon,false)}</span><br><span style="color:#0af;font-size:11px">${markerType.label}</span>${wp.info?'<br><i style="color:#aaa;font-size:11px">'+wp.info+'</i>':''}${platesPopupBtn}<br><a href="#" onclick="editWaypoint(${wp.id})" style="color:#00e5ff">Edit</a>`;
     marker.bindPopup(popupContent);
     marker.on('click',()=>window.selectWaypoint(wp.id));
     return marker;
