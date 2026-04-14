@@ -699,6 +699,78 @@ textarea{resize:vertical;min-height:55px}
   </div>
   <iframe id="plateViewerFrame" src="about:blank"></iframe>
 </div>
+  <!-- USER GUIDE MODAL -->
+<div id="userGuideModal" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:15000;display:none;overflow:auto;padding:16px;backdrop-filter:blur(4px)">
+  <div style="background:var(--bg-panel);border:1px solid var(--border-glow);border-radius:12px;max-width:680px;margin:0 auto;padding:24px;box-shadow:0 0 40px rgba(0,0,0,0.8)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <h2 style="font-family:var(--font-display);font-size:14px;letter-spacing:2px;color:var(--accent-cyan);margin:0">📖 USER GUIDE — SLAP-GAP AIR NAV</h2>
+      <button id="closeUserGuideBtn" class="btn small btn-red">✖ CLOSE</button>
+    </div>
+    <div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);line-height:1.8">
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">1. GETTING STARTED</div>
+      <p>Open the app via your browser or home screen shortcut. Enter the password when prompted. The map loads centred on Bangladesh. The <b style="color:var(--text-bright)">sidebar</b> is on the right (desktop) or bottom (iPad). Collapse/expand it with the arrow tab button.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">2. MAP LAYERS</div>
+      <p>Use the <b style="color:var(--text-bright)">Map Layer</b> buttons to switch between: 🗺️ Normal (OpenStreetMap), 🛰️ Satellite (Esri), ⛰️ Topo (terrain), 🌑 Dark (night), 🗾 ESRI Topo. The quick-toggle button on the top-left of the map switches between Normal and Satellite instantly.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">3. ADDING WAYPOINTS</div>
+      <p><b>By tapping the map:</b> Tap any point → a confirmation dialog appears → tap YES, CREATE → enter name and optional notes.<br>
+      <b>By coordinates:</b> Use the <b style="color:var(--text-bright)">Jump to Coordinates</b> section → enter Lat/Lon in DMS format → tap GO / ADD WAYPOINT.<br>
+      Waypoints appear as coloured markers. Each marker type has a symbol: ● Default (red), H Helipad (blue), ★ Important (gold), ◆ Checkpoint (silver), ▲ Marker (white), ■ Airport (green).</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">4. WAYPOINT LIST & SEARCH</div>
+      <p>Tap <b style="color:var(--text-bright)">📋 LIST</b> next to Waypoints. A modal opens showing all waypoints. Use the <b style="color:var(--text-bright)">search bar</b> at the top to filter by name instantly. Each entry shows Edit, Delete, Select, and (if plates exist) a 📄 Plates button.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">5. EDITING A WAYPOINT</div>
+      <p>Tap a marker on the map → popup appears → tap <b style="color:var(--text-bright)">Edit</b>. Or use the 📋 LIST modal. The edit screen lets you change: Name, Latitude, Longitude, Marker Type, Info/Notes, and add Approach Plates (PDFs).</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">6. APPROACH PLATES (PDFs)</div>
+      <p>In the Edit Waypoint modal, scroll to the <b style="color:var(--accent-amber)">📄 APPROACH PLATES</b> section. Tap <b style="color:var(--text-bright)">➕ ADD PLATE (PDF)</b> to pick one or more PDF files. They are saved inside the app.<br>
+      <b>Viewing:</b> From the map popup → tap 📄 N Plate(s). From the Waypoints List → tap 📄 Plates. A full-screen viewer opens with PREV / NEXT buttons to navigate between plates. All PDF pages are shown. Tap ✖ CLOSE to return.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">7. BUILDING A ROUTE</div>
+      <p>Select 2 or more waypoints by tapping them (they highlight blue) or using 🎯 Sel in the list. Tap <b style="color:var(--text-bright)">⛓ ROUTE</b> to draw the route line. The Route Summary below shows each leg: distance, bearing, and ETA. Enter your speed in knots in the SPEED field for accurate ETAs. Tap ✖ CLEAR ROUTE to reset.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">8. SAVING & LOADING ROUTES</div>
+      <p>After building a route, tap <b style="color:var(--text-bright)">💾 SAVE ROUTE</b> → enter a name → confirm. View saved routes via <b style="color:var(--text-bright)">📂 SAVED ROUTES</b>. Each saved route can be edited (rename), shown on map, or deleted. Routes remember the waypoint IDs used — if waypoints are deleted, re-add them before showing the route.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">9. FLYING MODE & GPS</div>
+      <p>Tap <b style="color:var(--text-bright)">🚁 FLY ON</b> to activate GPS tracking. A helicopter icon follows your position. GPS Speed and Course are displayed live. Tap ⏹ FLY OFF to stop. <b>Note:</b> GPS requires HTTPS (your GitHub Pages link) and location permission granted in the browser.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">10. DIRECT-TO NAVIGATION</div>
+      <p>Select a waypoint from the <b style="color:var(--text-bright)">Direct-To Waypoint</b> dropdown → tap ➤ DIRECT-TO. A magenta dashed line draws from your position to the target waypoint, updating live with distance, bearing, and ETA. Tap ⏹ STOP to end.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">11. MOVING TRACK PROJECTION</div>
+      <p>In Flying Mode, tap <b style="color:var(--text-bright)">📡 TRACK ON</b>. A green dashed line projects your 20-minute track based on current GPS speed and course. The panel shows projected distance, course, and speed. Tap 📡 TRACK OFF to hide.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">12. AREA MANAGEMENT</div>
+      <p>Tap <b style="color:var(--text-bright)">✚ CREATE AREA</b> to draw a polygon or circular restricted/operational area. Enter corner coordinates or choose a centre waypoint and diameter. Areas are colour-coded and labelled on the map. Use the <b style="color:var(--text-bright)">Show / Hide Areas</b> panel to toggle individual area visibility.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">13. MEASUREMENT TOOL</div>
+      <p>Tap <b style="color:var(--text-bright)">📏 MEASURE</b> on the map. Two draggable endpoints appear. Drag them to measure the distance and reciprocal bearings between any two points on the map. Tap ⏹ STOP to close.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">14. PRE-FLIGHT TILE CACHE (OFFLINE USE)</div>
+      <p>Expand the <b style="color:var(--text-bright)">Pre-flight Cache</b> section. Tap 📦 CACHE AREA → draw a rectangle on the map over your operating area → select zoom levels and map layers → tap ⬇ DOWNLOAD NOW. All tiles in that area are saved for offline use. Useful before flights in low-connectivity areas.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">15. IMPORT / EXPORT</div>
+      <p><b>💾 SAVE:</b> Saves all waypoints and areas to this browser's local storage.<br>
+      <b>📤 EXPORT:</b> Opens the export menu. Choose what to export — All, Waypoints Only, Areas Only, Selected items, Custom mix, or <b style="color:var(--accent-amber)">🛣️ Share Routes</b> (exports selected routes with their waypoints). Tick "Include Approach Plates PDFs" to include PDF data (increases file size).<br>
+      <b>📥 IMPORT:</b> Paste exported JSON into the text area and tap IMPORT. Waypoints, areas, and routes are all restored, including PDFs if they were included in the export.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">16. PRINT FLIGHT BRIEF</div>
+      <p>Tap <b style="color:var(--text-bright)">🖨️ PRINT BRIEF</b>. Fill in mission details, weather, NOTAM, and special notes. The current route is automatically included in the briefing. Tap 🖨️ PRINT / SAVE PDF to open the print dialog.</p>
+
+      <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">17. TIPS FOR iPAD USE</div>
+      <p>• The sidebar docks at the bottom in portrait/landscape iPad mode — tap the handle to collapse/expand it.<br>
+      • PDF approach plates show all pages when opened in the viewer.<br>
+      • Pre-cache tiles before flight for offline map use.<br>
+      • Add this app to your iPad Home Screen for a full-screen PWA experience.<br>
+      • Use Safari on iPad for best GPS and PDF compatibility.</p>
+
+    </div>
+  </div>
+</div>
 <!-- STARTUP SPLASH SCREEN -->
 <div id="splashOverlay">
   <div class="splash-box">
@@ -960,7 +1032,12 @@ textarea{resize:vertical;min-height:55px}
     <a id="printBriefBtn" class="btn full" style="background:rgba(255,171,0,0.18);border-color:rgba(255,171,0,0.7);color:#ffab00;font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:2px;padding:12px;box-shadow:0 0 14px rgba(255,171,0,0.2)">🖨️ PRINT BRIEF</a>
   </div>
 
-  <div id="credit">SLAP-GAP · LT CDR SADMAN · P NO 3223</div>
+<div id="credit">SLAP-GAP · LT CDR SADMAN · P NO 3223</div>
+
+  <!-- User Guide Button -->
+  <div class="section" style="padding:10px 14px 14px">
+    <a id="userGuideBtn" class="btn full" style="background:rgba(124,77,255,0.14);border-color:rgba(124,77,255,0.5);color:#b39ddb;font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:1.5px">📖 USER GUIDE</a>
+  </div>
 
 </div><!-- /sidebar -->
 
@@ -1066,12 +1143,24 @@ textarea{resize:vertical;min-height:55px}
   <div class="modal-content">
     <h3>📤 EXPORT OPTIONS</h3>
     <p style="font-size:12px;color:var(--text-dim)">Choose what to export:</p>
-    <div class="export-option" data-type="all"><strong>📦 Export All</strong><br><small>All waypoints and areas</small></div>
+<div class="export-option" data-type="all"><strong>📦 Export All</strong><br><small>All waypoints and areas</small></div>
     <div class="export-option" data-type="waypoints-only"><strong>📍 Export All Waypoints Only</strong><br><small>All waypoints (no areas)</small></div>
     <div class="export-option" data-type="areas-only"><strong>🗺️ Export All Areas Only</strong><br><small>All areas (no waypoints)</small></div>
     <div class="export-option" data-type="selected-waypoints"><strong>✅ Export Selected Waypoints</strong><br><small>Choose specific waypoints</small></div>
     <div class="export-option" data-type="selected-areas"><strong>✅ Export Selected Areas</strong><br><small>Choose specific areas</small></div>
     <div class="export-option" data-type="custom"><strong>🎯 Custom Selection</strong><br><small>Mix waypoints and areas</small></div>
+    <div class="export-option" data-type="route-share"><strong>🛣️ Share Routes</strong><br><small>Export saved routes with their waypoints</small></div>
+    <div class="selection-section" id="routeExportSelection" style="display:none">
+      <h4>SELECT ROUTES TO SHARE</h4>
+      <div id="routeCheckboxList"></div>
+      <div style="margin-top:8px;padding:8px;background:var(--bg-deep);border-radius:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">
+        All waypoints used in selected routes will be included automatically.
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);cursor:pointer">
+        <input type="checkbox" id="routeExportWithPdfs" style="accent-color:var(--accent-amber)">
+        Include Approach Plates PDFs (larger file size)
+      </label>
+    </div>
     <div class="selection-section" id="waypointSelection">
       <h4>SELECT WAYPOINTS</h4>
       <button class="btn small btn-blue select-all-btn" id="selectAllWaypoints">Select All</button>
@@ -1084,7 +1173,11 @@ textarea{resize:vertical;min-height:55px}
       <button class="btn small btn-red select-all-btn" id="deselectAllAreas">Deselect All</button>
       <div class="checkbox-list" id="areaCheckboxList"></div>
     </div>
-    <div class="btn-row" style="margin-top:16px;justify-content:center">
+<label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);cursor:pointer" id="pdfToggleRow">
+      <input type="checkbox" id="exportWithPdfs" style="accent-color:var(--accent-amber)">
+      Include Approach Plates PDFs (larger file size)
+    </label>
+    <div class="btn-row" style="margin-top:12px;justify-content:center">
       <button class="btn btn-green" id="confirmExportBtn" style="padding:10px 28px">📤 EXPORT</button>
       <button class="btn btn-red" id="cancelExportBtn" style="padding:10px 28px">CANCEL</button>
     </div>
@@ -2102,12 +2195,22 @@ const plateCount=(wp.plates||[]).length;
   /* ================================================
      EXPORT MODAL
   ================================================ */
-  function showExportModal(){
+function showExportModal(){
     document.getElementById('exportModal').style.display='block';
     document.getElementById('waypointSelection').style.display='none';
     document.getElementById('areaSelection').style.display='none';
+    document.getElementById('routeExportSelection').style.display='none';
+    document.getElementById('pdfToggleRow').style.display='flex';
     document.querySelectorAll('.export-option').forEach(opt=>opt.classList.remove('selected'));
-    populateWaypointCheckboxes();populateAreaCheckboxes();
+    populateWaypointCheckboxes();populateAreaCheckboxes();populateRouteCheckboxes();
+  }
+  function populateRouteCheckboxes(){
+    const list=document.getElementById('routeCheckboxList');list.innerHTML='';
+    savedRoutes.forEach(route=>{
+      const div=document.createElement('div');div.className='checkbox-item';
+      div.innerHTML=`<label><input type="checkbox" value="${route.id}" class="route-export-checkbox"> <b>${route.name}</b> — ${route.totalDist} NM</label>`;
+      list.appendChild(div);
+    });
   }
   function populateWaypointCheckboxes(){
     const list=document.getElementById('waypointCheckboxList');list.innerHTML='';
@@ -2132,19 +2235,42 @@ const plateCount=(wp.plates||[]).length;
       const type=this.dataset.type;
       document.getElementById('waypointSelection').style.display='none';
       document.getElementById('areaSelection').style.display='none';
-      if('selected-waypoints'===type)document.getElementById('waypointSelection').style.display='block';
+     if('selected-waypoints'===type)document.getElementById('waypointSelection').style.display='block';
       else if('selected-areas'===type)document.getElementById('areaSelection').style.display='block';
       else if('custom'===type){document.getElementById('waypointSelection').style.display='block';document.getElementById('areaSelection').style.display='block';}
+      else if('route-share'===type){document.getElementById('routeExportSelection').style.display='block';document.getElementById('pdfToggleRow').style.display='none';}
     };
   });
   document.getElementById('selectAllWaypoints').onclick=function(){document.querySelectorAll('.waypoint-checkbox').forEach(cb=>cb.checked=true);};
   document.getElementById('deselectAllWaypoints').onclick=function(){document.querySelectorAll('.waypoint-checkbox').forEach(cb=>cb.checked=false);};
   document.getElementById('selectAllAreas').onclick=function(){document.querySelectorAll('.area-checkbox').forEach(cb=>cb.checked=true);};
   document.getElementById('deselectAllAreas').onclick=function(){document.querySelectorAll('.area-checkbox').forEach(cb=>cb.checked=false);};
-  document.getElementById('confirmExportBtn').onclick=function(){
+document.getElementById('confirmExportBtn').onclick=function(){
     const selectedOption=document.querySelector('.export-option.selected');
     if(!selectedOption)return void alert('Please select an export option');
     const type=selectedOption.dataset.type;
+    const includePdfs=document.getElementById('exportWithPdfs').checked;
+
+    function stripPdfs(wps){
+      if(includePdfs)return wps;
+      return wps.map(w=>Object.assign({},w,{plates:(w.plates||[]).map(p=>({name:p.name,data:null}))}));
+    }
+
+    if(type==='route-share'){
+      const checkedRouteIds=Array.from(document.querySelectorAll('.route-export-checkbox:checked')).map(cb=>parseInt(cb.value));
+      if(!checkedRouteIds.length)return alert('Please select at least one route');
+      const withPdfs=document.getElementById('routeExportWithPdfs').checked;
+      const exportRoutes=savedRoutes.filter(r=>checkedRouteIds.includes(r.id));
+      // Collect all unique waypoint IDs used in selected routes
+      const allWpIds=new Set();exportRoutes.forEach(r=>r.waypointIds.forEach(id=>allWpIds.add(id)));
+      let exportWaypoints=waypoints.filter(w=>allWpIds.has(w.id));
+      if(!withPdfs)exportWaypoints=exportWaypoints.map(w=>Object.assign({},w,{plates:[]}));
+      const blob=new Blob([JSON.stringify({waypoints:exportWaypoints,areas:[],routes:exportRoutes},null,2)],{type:'application/json'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='routes_export.json';a.click();
+      closeExportModal();
+      return;
+    }
+
     let exportWaypoints=[],exportAreas=[];
     switch(type){
       case'all':exportWaypoints=waypoints;exportAreas=areas;break;
@@ -2154,6 +2280,7 @@ const plateCount=(wp.plates||[]).length;
       case'selected-areas':{const ids=Array.from(document.querySelectorAll('.area-checkbox:checked')).map(cb=>parseInt(cb.value));if(!ids.length)return void alert('Please select at least one area');exportAreas=areas.filter(area=>ids.includes(area.id));break;}
       case'custom':{const wpIds=Array.from(document.querySelectorAll('.waypoint-checkbox:checked')).map(cb=>parseInt(cb.value)),areaIds=Array.from(document.querySelectorAll('.area-checkbox:checked')).map(cb=>parseInt(cb.value));if(!wpIds.length&&!areaIds.length)return void alert('Please select at least one item');exportWaypoints=waypoints.filter(wp=>wpIds.includes(wp.id));exportAreas=areas.filter(area=>areaIds.includes(area.id));break;}
     }
+    exportWaypoints=stripPdfs(exportWaypoints);
     const blob=new Blob([JSON.stringify({waypoints:exportWaypoints,areas:exportAreas},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='waypoints_areas.json';a.click();
     closeExportModal();
@@ -2490,10 +2617,28 @@ document.getElementById('routeBtn').onclick=()=>{makeRoute();updateSaveRouteBtnS
   document.getElementById('clearRouteBtn').onclick=()=>{clearRoute();updateSaveRouteBtnState();};
   document.getElementById('saveBtn').onclick=()=>{saveLocal();alert('Saved waypoints and areas!');};
   document.getElementById('exportBtn').onclick=showExportModal;
-  document.getElementById('importBtn').onclick=()=>{
+document.getElementById('importBtn').onclick=()=>{
     try{
       const importData=JSON.parse(document.getElementById('jsonArea').value);
-      if(importData.waypoints)importData.waypoints.forEach(w=>addWaypoint(w.lat,w.lon,w.name,w.markerType||'default',w.info||''));
+      if(importData.waypoints)importData.waypoints.forEach(w=>{
+        addWaypoint(w.lat,w.lon,w.name,w.markerType||'default',w.info||'');
+        // Restore plates if present in import data
+        if(w.plates&&w.plates.length){
+          const newWp=waypoints[waypoints.length-1];
+          newWp.plates=w.plates;
+          saveLocal();
+        }
+      });
+      // Import routes if present
+      if(importData.routes){
+        importData.routes.forEach(r=>{
+          if(!savedRoutes.find(sr=>sr.id===r.id)){
+            // Remap waypoint IDs to new ones if IDs changed
+            savedRoutes.push(r);
+          }
+        });
+        saveAllRoutes();
+      }
       if(importData.areas){
         importData.areas.forEach(area=>{
           area.color||(area.color=area.type==='circular'?'#ff0000':'#8b45c1');
@@ -3101,6 +3246,13 @@ document.getElementById('areaVisToggle').onclick=function(){
   const open=panel.style.display==='block';
   panel.style.display=open?'none':'block';
   arrow.textContent=open?'▶ EXPAND':'▼ COLLAPSE';
+};
+  // ---- USER GUIDE ----
+document.getElementById('userGuideBtn').onclick=function(){
+  document.getElementById('userGuideModal').style.display='block';
+};
+document.getElementById('closeUserGuideBtn').onclick=function(){
+  document.getElementById('userGuideModal').style.display='none';
 };
   // ---- SPLASH SCREEN LOGIC ----
 (function(){
