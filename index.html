@@ -615,10 +615,140 @@ textarea{resize:vertical;min-height:55px}
   stroke:#00e676 !important;stroke-width:2 !important;stroke-dasharray:8,4 !important;
   fill:rgba(0,230,118,0.08) !important;
 }
+/* ======== SPLASH SCREEN ======== */
+#splashOverlay{
+  position:fixed;left:0;top:0;right:0;bottom:0;
+  background:rgba(4,8,15,0.97);z-index:99999;
+  display:flex;align-items:center;justify-content:center;
+  overflow:auto;backdrop-filter:blur(6px);
+  padding:20px;
+}
+#splashOverlay .splash-box{
+  background:var(--bg-panel);border:1px solid var(--border-glow);
+  border-radius:12px;max-width:520px;width:100%;
+  padding:28px 24px;box-shadow:0 0 60px rgba(0,170,255,0.15);
+}
+.splash-title{
+  font-family:var(--font-display);font-size:15px;font-weight:900;
+  letter-spacing:3px;color:var(--accent-cyan);text-align:center;
+  text-shadow:0 0 20px rgba(0,229,255,0.5);margin-bottom:4px;
+}
+.splash-sub{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:2px;
+  color:var(--text-dim);text-align:center;margin-bottom:18px;
+}
+.splash-section{
+  background:var(--bg-deep);border:1px solid var(--border-dim);
+  border-radius:8px;padding:12px 14px;margin-bottom:10px;
+}
+.splash-section-title{
+  font-family:var(--font-display);font-size:9px;font-weight:700;
+  letter-spacing:2px;color:var(--accent-amber);margin-bottom:6px;
+  text-transform:uppercase;
+}
+.splash-section p{
+  font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);
+  line-height:1.7;margin:3px 0;
+}
+.splash-section a{color:var(--accent-cyan);text-decoration:none}
+.splash-tc{
+  font-family:var(--font-mono);font-size:10px;color:var(--text-dim);
+  line-height:1.6;margin:0;
+}
+.splash-btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.splash-btn-row .btn{flex:1;min-width:140px;font-size:12px;padding:10px}
+#splashNeverShow{
+  display:flex;align-items:center;gap:6px;margin-top:10px;
+  font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+  cursor:pointer;justify-content:center;
+}
+#splashNeverShow input{accent-color:var(--accent-cyan);width:14px;height:14px}
+/* ======== PDF PLATE VIEWER ======== */
+#plateViewerOverlay{
+  position:fixed;left:0;top:0;right:0;bottom:0;
+  background:#000;z-index:20000;display:none;
+  flex-direction:column;
+}
+#plateViewerOverlay.open{display:flex}
+#plateViewerToolbar{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg-panel);border-bottom:1px solid var(--border-glow);
+  padding:8px 12px;flex-shrink:0;flex-wrap:wrap;
+}
+#plateViewerTitle{
+  font-family:var(--font-display);font-size:12px;letter-spacing:1.5px;
+  color:var(--accent-amber);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#plateViewerFrame{
+  flex:1;width:100%;border:none;background:#fff;
+}
+#plateViewerCount{
+  font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);white-space:nowrap;
+}
 </style>
 </head>
 <body>
+  <!-- APPROACH PLATES VIEWER -->
+<div id="plateViewerOverlay">
+  <div id="plateViewerToolbar">
+    <button class="btn small btn-red" id="plateViewerCloseBtn" style="flex-shrink:0">✖ CLOSE</button>
+    <div id="plateViewerTitle">APPROACH PLATES</div>
+    <div id="plateViewerCount"></div>
+    <button class="btn small btn-blue" id="plateViewerPrevBtn">◀ PREV</button>
+    <button class="btn small btn-blue" id="plateViewerNextBtn">NEXT ▶</button>
+  </div>
+  <iframe id="plateViewerFrame" src="about:blank"></iframe>
+</div>
+<!-- STARTUP SPLASH SCREEN -->
+<div id="splashOverlay">
+  <div class="splash-box">
+    <div class="splash-title">✈ AIR NAVIGATION SYSTEM</div>
+    <div class="splash-sub">OPERATIONAL APPLICATION INTERFACE</div>
 
+    <div class="splash-section">
+      <div class="splash-section-title">🎖️ Credits</div>
+      <p>Developed by <strong style="color:var(--text-bright)">Lt Cdr Sadman Sakib Aikyo</strong></p>
+      <p>P No 3223 · Helicopter Pilot · Bangladesh Navy</p>
+      <p style="color:var(--text-dim);font-size:11px">All rights reserved. The owner reserves the right to change any feature without prior notice.</p>
+    </div>
+
+    <div class="splash-section">
+      <div class="splash-section-title">📱 System Type — Progressive Web Application (PWA)</div>
+      <p>✔ Launches instantly via browser or home screen</p>
+      <p>✔ Optimized for low-bandwidth and offline use</p>
+      <p>✔ Secure, lightweight, and continuously updatable</p>
+      <p>✔ Delivers an app-like operational experience without installation</p>
+    </div>
+
+    <div class="splash-section">
+      <div class="splash-section-title">⚠️ Operational Notice</div>
+      <p>• Intended for navigation support and situational awareness only</p>
+      <p>• <strong style="color:var(--accent-red)">Not a substitute</strong> for certified flight instruments or official data</p>
+      <p>• Users must comply with established aviation procedures at all times</p>
+      <p>• The owner may at any time remove this app from the server — upon which the app will cease to function</p>
+    </div>
+
+    <div class="splash-section">
+      <div class="splash-section-title">📋 Terms &amp; Conditions</div>
+      <p class="splash-tc">By proceeding you agree that: (1) This application is provided as-is for operational support only and carries no warranty of accuracy or availability. (2) The developer (Lt Cdr Sadman Sakib Aikyo, P No 3223) holds all intellectual property rights and may modify, suspend, or permanently delete this application from the server at any time without notice, upon which the application will cease to function. (3) This tool does not replace certified navigation equipment, official charts, or approved flight procedures. (4) The user assumes full responsibility for any navigation decisions made using this application.</p>
+      <p style="margin-top:8px">📧 Queries: <a href="mailto:sadman.aikyo3223@gmail.com">sadman.aikyo3223@gmail.com</a></p>
+    </div>
+
+    <div style="text-align:center;margin-top:8px;font-family:var(--font-display);font-size:10px;color:var(--accent-green);letter-spacing:2px">
+      STATUS: READY &nbsp;·&nbsp; ✈️ SAFE OPERATIONS
+    </div>
+
+    <label id="splashNeverShow">
+      <input type="checkbox" id="splashNeverShowChk"> Never show again
+    </label>
+
+    <div class="splash-btn-row">
+      <button class="btn btn-green" id="splashAgreeBtn">✅ AGREE &amp; PROCEED</button>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD SCREEN -->
 <!-- PASSWORD SCREEN -->
 <div id="passwordScreen">
   <div class="password-box">
@@ -852,7 +982,8 @@ textarea{resize:vertical;min-height:55px}
 <div id="waypointListModal">
   <div class="modal-content">
     <h3>📍 WAYPOINTS LIST <button class="btn small btn-red" id="closeWaypointListBtn" style="float:right">CLOSE</button></h3>
-    <div id="waypointListContent" style="max-height:480px;overflow-y:auto"></div>
+    <input type="text" id="waypointSearchInput" placeholder="🔍 Search waypoints by name..." style="margin:8px 0 10px;width:100%">
+    <div id="waypointListContent" style="max-height:440px;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -1378,29 +1509,41 @@ function initializeApp(){
   /* ================================================
      WAYPOINT LIST MODAL
   ================================================ */
-  document.getElementById('showWaypointListBtn').onclick=function(){
-    const modal=document.getElementById('waypointListModal');
+function renderWaypointListFiltered(filter){
     const content=document.getElementById('waypointListContent');
     content.innerHTML='';
-    if(waypoints.length===0){
-      content.innerHTML='<p style="text-align:center;color:var(--text-dim);font-family:var(--font-mono)">No waypoints saved yet</p>';
-    }else{
-      waypoints.forEach(w=>{
-        const markerType=MARKER_TYPES[w.markerType||'default'],div=document.createElement('div');
-        div.className='modal-list-item';
-        div.innerHTML=`<b>${w.name}</b> <span style="color:${markerType.color};">●</span><br>
-          <span class="small">${formatDMS(w.lat,true)}, ${formatDMS(w.lon,false)} - ${markerType.label}</span>
-          ${w.info?`<div class="info-text">${w.info}</div>`:''}
-          <div class="waypoint-actions">
-            <a class="btn small btn-blue" onclick="editWaypoint(${w.id})">✏️ Edit</a>
-            <a class="btn small btn-red" onclick="deleteWaypoint(${w.id})">🗑️ Del</a>
-            <a class="btn small btn-purple" onclick="selectWaypoint(${w.id})">🎯 Sel</a>
-          </div>`;
-        content.appendChild(div);
-      });
+    const filtered=filter?waypoints.filter(w=>w.name.toLowerCase().includes(filter.toLowerCase())):waypoints;
+    if(filtered.length===0){
+      const plateCount=w=>w.plates?(w.plates.length):0;
+      content.innerHTML='<p style="text-align:center;color:var(--text-dim);font-family:var(--font-mono)">No waypoints found</p>';
+      return;
     }
-    modal.style.display='block';
+    filtered.forEach(w=>{
+      const markerType=MARKER_TYPES[w.markerType||'default'],div=document.createElement('div');
+      div.className='modal-list-item';
+      const plateCount=(w.plates||[]).length;
+      const plateBadge=plateCount>0?`<span style="color:var(--accent-amber);font-family:var(--font-mono);font-size:11px;margin-left:6px">📄 ${plateCount}</span>`:'';
+      const platesBtn=plateCount>0?`<a class="btn small btn-amber" onclick="openPlateViewer(${w.id})">📄 Plates</a>`:'';
+      div.innerHTML=`<b>${w.name}</b> <span style="color:${markerType.color};">●</span>${plateBadge}<br>
+        <span class="small">${formatDMS(w.lat,true)}, ${formatDMS(w.lon,false)} - ${markerType.label}</span>
+        ${w.info?`<div class="info-text">${w.info}</div>`:''}
+        <div class="waypoint-actions">
+          <a class="btn small btn-blue" onclick="editWaypoint(${w.id})">✏️ Edit</a>
+          <a class="btn small btn-red" onclick="deleteWaypoint(${w.id})">🗑️ Del</a>
+          <a class="btn small btn-purple" onclick="selectWaypoint(${w.id})">🎯 Sel</a>
+          ${platesBtn}
+        </div>`;
+      content.appendChild(div);
+    });
+  }
+  document.getElementById('showWaypointListBtn').onclick=function(){
+    document.getElementById('waypointListModal').style.display='block';
+    document.getElementById('waypointSearchInput').value='';
+    renderWaypointListFiltered('');
   };
+  document.getElementById('waypointSearchInput').addEventListener('input',function(){
+    renderWaypointListFiltered(this.value);
+  });
   document.getElementById('closeWaypointListBtn').onclick=function(){
     document.getElementById('waypointListModal').style.display='none';
   };
@@ -1602,9 +1745,15 @@ function initializeApp(){
       </div>
       <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin-bottom:4px;">MARKER TYPE</div>
       <div class="marker-type-grid" id="markerTypeGrid" style="margin:0 0 10px;"></div>
-      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin-bottom:2px;">INFO / NOTES</div>
+<div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin-bottom:2px;">INFO / NOTES</div>
       <textarea id="editInfo" rows="3" placeholder="Enter information..." style="${inStyle}resize:vertical;">${wp.info||''}</textarea>
-      <div style="display:flex;gap:8px;margin-top:4px;">
+      <div style="font-size:10px;color:var(--accent-amber);letter-spacing:1px;font-family:var(--font-display);font-weight:700;margin:12px 0 6px;border-top:1px solid var(--border-dim);padding-top:10px;">📄 APPROACH PLATES</div>
+      <div id="plateEditList" style="margin-bottom:8px;max-height:160px;overflow-y:auto"></div>
+      <label style="display:block;cursor:pointer;width:100%">
+        <div class="btn btn-amber full" style="margin:0;text-align:center">➕ ADD PLATE (PDF)</div>
+        <input type="file" id="plateFileInput" accept="application/pdf" multiple style="display:none">
+      </label>
+      <div style="display:flex;gap:8px;margin-top:12px;">
         <button id="saveEdit" style="flex:1;padding:10px;background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.4);color:var(--accent-green);border-radius:6px;font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;">💾 SAVE</button>
         <button id="cancelEdit" style="flex:1;padding:10px;background:rgba(255,23,68,0.12);border:1px solid rgba(255,23,68,0.4);color:var(--accent-red);border-radius:6px;font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;">✖ CANCEL</button>
       </div>
@@ -1625,6 +1774,32 @@ function initializeApp(){
       option.onclick=function(){editModal.querySelectorAll('.marker-type-option').forEach(o=>o.classList.remove('selected'));this.classList.add('selected');};
       grid.appendChild(option);
     });
+    // Render existing plates
+    function renderEditPlateList(){
+      const list=editModal.querySelector('#plateEditList');
+      list.innerHTML='';
+      (wp.plates||[]).forEach((plate,i)=>{
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-deep);border:1px solid var(--border-dim);border-radius:6px;margin-bottom:5px;';
+        row.innerHTML=`<span style="flex:1;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${plate.name}</span>
+          <button style="padding:4px 8px;background:rgba(0,170,255,0.12);border:1px solid rgba(0,170,255,0.4);color:#0af;border-radius:4px;font-size:11px;cursor:pointer" onclick="openPlateViewer(${wp.id},${i})">👁 VIEW</button>
+          <button data-pidx="${i}" style="padding:4px 8px;background:rgba(255,23,68,0.12);border:1px solid rgba(255,23,68,0.4);color:#ff1744;border-radius:4px;font-size:11px;cursor:pointer">🗑 DEL</button>`;
+        row.querySelector('[data-pidx]').onclick=function(){
+          wp.plates.splice(i,1);saveLocal();renderEditPlateList();
+        };
+        list.appendChild(row);
+      });
+    }
+    renderEditPlateList();
+    editModal.querySelector('#plateFileInput').onchange=async function(){
+      if(!wp.plates)wp.plates=[];
+      for(const file of Array.from(this.files)){
+        const data=await readFileAsBase64(file);
+        wp.plates.push({name:file.name,data});
+      }
+      saveLocal();renderEditPlateList();
+      this.value='';
+    };
     editModal.querySelector('#saveEdit').onclick=()=>{
       const newName=editModal.querySelector('#editName').value.trim(),
             latDeg=parseFloat(editModal.querySelector('#editLatDeg').value),
@@ -2212,16 +2387,73 @@ function initializeApp(){
     saveAllRoutes();
     renderSavedRoutesList();
   };
-  function saveLocal(){
+  /* ================================================
+     APPROACH PLATES (PDF per waypoint)
+  ================================================ */
+  let plateViewerWpId=null, plateViewerIndex=0;
+
+  window.openPlateViewer=function(wpId, startIndex){
+    const wp=waypoints.find(w=>w.id===wpId);
+    if(!wp||(wp.plates||[]).length===0)return;
+    plateViewerWpId=wpId;
+    plateViewerIndex=startIndex||0;
+    renderPlateViewerPage();
+    document.getElementById('plateViewerOverlay').classList.add('open');
+  };
+
+  function renderPlateViewerPage(){
+    const wp=waypoints.find(w=>w.id===plateViewerWpId);
+    if(!wp)return;
+    const plates=wp.plates||[];
+    document.getElementById('plateViewerTitle').textContent=wp.name+' — '+( plates[plateViewerIndex]?plates[plateViewerIndex].name:'');
+    document.getElementById('plateViewerCount').textContent=(plateViewerIndex+1)+' / '+plates.length;
+    const frame=document.getElementById('plateViewerFrame');
+    if(plates[plateViewerIndex]){
+      // Use object tag via data URL for full PDF with all pages on iPad
+      const dataUrl=plates[plateViewerIndex].data;
+      // Embed using full blob URL to get all pages
+      frame.src=dataUrl;
+    }
+  }
+
+  document.getElementById('plateViewerCloseBtn').onclick=function(){
+    document.getElementById('plateViewerOverlay').classList.remove('open');
+    document.getElementById('plateViewerFrame').src='about:blank';
+    plateViewerWpId=null;
+  };
+  document.getElementById('plateViewerPrevBtn').onclick=function(){
+    const wp=waypoints.find(w=>w.id===plateViewerWpId);
+    if(!wp)return;
+    if(plateViewerIndex>0){plateViewerIndex--;renderPlateViewerPage();}
+  };
+  document.getElementById('plateViewerNextBtn').onclick=function(){
+    const wp=waypoints.find(w=>w.id===plateViewerWpId);
+    if(!wp)return;
+    if(plateViewerIndex<(wp.plates||[]).length-1){plateViewerIndex++;renderPlateViewerPage();}
+  };
+
+  function readFileAsBase64(file){
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=e=>resolve(e.target.result);
+      reader.onerror=reject;
+      reader.readAsDataURL(file);
+    });
+  }
+function saveLocal(){
     try{
       localStorage.setItem('map_waypoints_v6',JSON.stringify(waypoints));
       localStorage.setItem('map_areas_v3',JSON.stringify(areas));
-      localStorage.setItem('map_area_visible',JSON.stringify(areaVisible)); 
-    }catch(e){alert('Error saving data: '+e.message);}
+      localStorage.setItem('map_area_visible',JSON.stringify(areaVisible));
+    }catch(e){alert('Error saving data: '+e.message+'\n\nIf storage is full, delete some approach plates PDFs.');}
   }
   function loadLocal(){
     const data=localStorage.getItem('map_waypoints_v6');
-    if(data)try{const arr=JSON.parse(data);arr.forEach(w=>addWaypointNoSave(w.lat,w.lon,w.name,w.markerType||'default',w.info||''));}catch(e){}
+    if(data)try{const arr=JSON.parse(data);arr.forEach(w=>{
+      const id=Date.now()+Math.floor(999*Math.random());
+      const wp={id,lat:w.lat,lon:w.lon,name:w.name||'WP-'+(waypoints.length+1),markerType:w.markerType||'default',info:w.info||'',plates:w.plates||[]};
+      waypoints.push(wp);markers[id]=createMarkerForWaypoint(wp);renderList();
+    });}catch(e){}
     // Restore saved visibility states
     const savedVis=localStorage.getItem('map_area_visible');
     const restoredVis=savedVis?JSON.parse(savedVis):{};
@@ -2868,6 +3100,22 @@ document.getElementById('areaVisToggle').onclick=function(){
   panel.style.display=open?'none':'block';
   arrow.textContent=open?'▶ EXPAND':'▼ COLLAPSE';
 };
+  // ---- SPLASH SCREEN LOGIC ----
+(function(){
+  const SPLASH_KEY = 'airnav_splash_seen';
+  const overlay = document.getElementById('splashOverlay');
+  if(localStorage.getItem(SPLASH_KEY) === 'true'){
+    overlay.style.display = 'none';
+    return;
+  }
+  overlay.style.display = 'flex';
+  document.getElementById('splashAgreeBtn').onclick = function(){
+    if(document.getElementById('splashNeverShowChk').checked){
+      localStorage.setItem(SPLASH_KEY, 'true');
+    }
+    overlay.style.display = 'none';
+  };
+})();
 checkAuthentication();
 </script>
 
