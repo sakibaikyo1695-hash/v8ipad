@@ -679,8 +679,8 @@ textarea{resize:vertical;min-height:55px}
   font-family:var(--font-display);font-size:12px;letter-spacing:1.5px;
   color:var(--accent-amber);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-#plateViewerFrame{
-  flex:1;width:100%;border:none;background:#fff;
+#plateViewerCanvas canvas{
+  max-width:100%;box-shadow:0 2px 12px rgba(0,0,0,0.6);background:#fff;display:block;
 }
 #plateViewerCount{
   font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);white-space:nowrap;
@@ -688,7 +688,7 @@ textarea{resize:vertical;min-height:55px}
 </style>
 </head>
 <body>
-  <!-- APPROACH PLATES VIEWER -->
+<!-- APPROACH PLATES VIEWER -->
 <div id="plateViewerOverlay">
   <div id="plateViewerToolbar">
     <button class="btn small btn-red" id="plateViewerCloseBtn" style="flex-shrink:0">✖ CLOSE</button>
@@ -697,7 +697,9 @@ textarea{resize:vertical;min-height:55px}
     <button class="btn small btn-blue" id="plateViewerPrevBtn">◀ PREV</button>
     <button class="btn small btn-blue" id="plateViewerNextBtn">NEXT ▶</button>
   </div>
-  <iframe id="plateViewerFrame" src="about:blank"></iframe>
+  <div id="plateViewerCanvas" style="flex:1;overflow-y:auto;background:#333;padding:10px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+    <div id="plateLoadingMsg" style="color:#fff;font-family:monospace;margin-top:40px;font-size:14px">Loading PDF...</div>
+  </div>
 </div>
   <!-- USER GUIDE MODAL -->
 <div id="userGuideModal" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:15000;display:none;overflow:auto;padding:16px;backdrop-filter:blur(4px)">
@@ -2519,45 +2521,83 @@ document.getElementById('confirmExportBtn').onclick=function(){
   /* ================================================
      APPROACH PLATES (PDF per waypoint)
   ================================================ */
-  let plateViewerWpId=null, plateViewerIndex=0;
+let plateViewerWpId=null, plateViewerIndex=0;
+  let _pdfJsLoaded=false;
 
-  window.openPlateViewer=function(wpId, startIndex){
+  function loadPdfJs(callback){
+    if(_pdfJsLoaded){callback();return;}
+    const script=document.createElement('script');
+    script.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload=function(){
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      _pdfJsLoaded=true;
+      callback();
+    };
+    document.head.appendChild(script);
+  }
+
+  window.openPlateViewer=function(wpId,startIndex){
     const wp=waypoints.find(w=>w.id===wpId);
     if(!wp||(wp.plates||[]).length===0)return;
     plateViewerWpId=wpId;
     plateViewerIndex=startIndex||0;
-    renderPlateViewerPage();
     document.getElementById('plateViewerOverlay').classList.add('open');
+    loadPdfJs(()=>renderPlateViewerPage());
   };
+
+  function base64ToUint8Array(dataUrl){
+    const base64=dataUrl.split(',')[1];
+    const binary=atob(base64);
+    const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    return bytes;
+  }
 
   function renderPlateViewerPage(){
     const wp=waypoints.find(w=>w.id===plateViewerWpId);
     if(!wp)return;
     const plates=wp.plates||[];
-    document.getElementById('plateViewerTitle').textContent=wp.name+' — '+( plates[plateViewerIndex]?plates[plateViewerIndex].name:'');
+    const plate=plates[plateViewerIndex];
+    if(!plate)return;
+
+    document.getElementById('plateViewerTitle').textContent=wp.name+' — '+plate.name;
     document.getElementById('plateViewerCount').textContent=(plateViewerIndex+1)+' / '+plates.length;
-    const frame=document.getElementById('plateViewerFrame');
-if(plates[plateViewerIndex]){
-      // Convert base64 data URL to Blob URL — required for Safari/iPad to show all pages
-      const dataUrl=plates[plateViewerIndex].data;
-      const base64=dataUrl.split(',')[1];
-      const binary=atob(base64);
-      const bytes=new Uint8Array(binary.length);
-      for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
-      const blob=new Blob([bytes],{type:'application/pdf'});
-      const blobUrl=URL.createObjectURL(blob);
-      // Revoke previous blob URL to free memory
-      if(frame._currentBlobUrl) URL.revokeObjectURL(frame._currentBlobUrl);
-      frame._currentBlobUrl=blobUrl;
-      frame.src=blobUrl;
-    }
+
+    const container=document.getElementById('plateViewerCanvas');
+    container.innerHTML='<div id="plateLoadingMsg" style="color:#fff;font-family:monospace;margin-top:40px;font-size:14px">Loading PDF...</div>';
+    container.scrollTop=0;
+
+    const pdfData=base64ToUint8Array(plate.data);
+
+    pdfjsLib.getDocument({data:pdfData}).promise.then(function(pdf){
+      container.innerHTML='';
+      const totalPages=pdf.numPages;
+      // Render all pages sequentially
+      function renderPage(pageNum){
+        if(pageNum>totalPages)return;
+        pdf.getPage(pageNum).then(function(page){
+          const viewport=page.getViewport({scale: window.devicePixelRatio>=2 ? 2.5 : 2.0});
+          const canvas=document.createElement('canvas');
+          const ctx=canvas.getContext('2d');
+          canvas.width=viewport.width;
+          canvas.height=viewport.height;
+          canvas.style.width=Math.min(viewport.width, container.clientWidth-20)+'px';
+          canvas.style.height='auto';
+          container.appendChild(canvas);
+          page.render({canvasContext:ctx,viewport:viewport}).promise.then(function(){
+            renderPage(pageNum+1);
+          });
+        });
+      }
+      renderPage(1);
+    }).catch(function(err){
+      container.innerHTML='<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px">Error loading PDF: '+err.message+'</div>';
+    });
   }
 
-document.getElementById('plateViewerCloseBtn').onclick=function(){
-    const frame=document.getElementById('plateViewerFrame');
-    if(frame._currentBlobUrl){ URL.revokeObjectURL(frame._currentBlobUrl); frame._currentBlobUrl=null; }
-    frame.src='about:blank';
+  document.getElementById('plateViewerCloseBtn').onclick=function(){
     document.getElementById('plateViewerOverlay').classList.remove('open');
+    document.getElementById('plateViewerCanvas').innerHTML='';
     plateViewerWpId=null;
   };
   document.getElementById('plateViewerPrevBtn').onclick=function(){
