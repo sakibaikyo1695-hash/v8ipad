@@ -788,8 +788,8 @@ textarea{resize:vertical;min-height:55px}
       <div class="splash-section-title">📱 System Type — Progressive Web Application (PWA)</div>
       <p>✔ Launches instantly via browser or home screen</p>
       <p>✔ Optimized for low-bandwidth and offline use</p>
-      <p>✔ Secure, lightweight, and continuously updatable</p>
-      <p>✔ Delivers an app-like operational experience without installation</p>
+      <p>✔ Secure, lightweight and continuously updatable</p>
+      <p>✔ Delivers operational experience without installation</p>
     </div>
 
     <div class="splash-section">
@@ -802,12 +802,12 @@ textarea{resize:vertical;min-height:55px}
 
     <div class="splash-section">
       <div class="splash-section-title">📋 Terms &amp; Conditions</div>
-      <p class="splash-tc">By proceeding you agree that: (1) This application is provided as-is for operational support only and carries no warranty of accuracy or availability. (2) The developer (Lt Cdr Sadman Sakib Aikyo, P No 3223) holds all intellectual property rights and may modify, suspend, or permanently delete this application from the server at any time without notice, upon which the application will cease to function. (3) This tool does not replace certified navigation equipment, official charts, or approved flight procedures. (4) The user assumes full responsibility for any navigation decisions made using this application.</p>
+      <p class="splash-tc">By proceeding you agree that: (1) This application is provided as-is for operational support only and carries no warranty of accuracy or availability. (2) The developer (Lt Cdr Sadman Sakib Aikyo, P No 3223) holds all intellectual property rights and may modify, suspend or permanently delete this application from the server at any time without notice, upon which the application will cease to function. (3) This tool does not replace certified navigation equipment, official maps or approved flight procedures. (4) The user assumes full responsibility for any navigation decisions made using this application.</p>
       <p style="margin-top:8px">📧 Queries: <a href="mailto:sadman.aikyo3223@gmail.com">sadman.aikyo3223@gmail.com</a></p>
     </div>
 
     <div style="text-align:center;margin-top:8px;font-family:var(--font-display);font-size:10px;color:var(--accent-green);letter-spacing:2px">
-      STATUS: READY &nbsp;·&nbsp; ✈️ SAFE OPERATIONS
+      STATUS: READY &nbsp;·&nbsp; ✈️ SAFE LANDINGS
     </div>
 
     <label id="splashNeverShow">
@@ -2537,17 +2537,27 @@ document.getElementById('confirmExportBtn').onclick=function(){
     document.getElementById('plateViewerTitle').textContent=wp.name+' — '+( plates[plateViewerIndex]?plates[plateViewerIndex].name:'');
     document.getElementById('plateViewerCount').textContent=(plateViewerIndex+1)+' / '+plates.length;
     const frame=document.getElementById('plateViewerFrame');
-    if(plates[plateViewerIndex]){
-      // Use object tag via data URL for full PDF with all pages on iPad
+if(plates[plateViewerIndex]){
+      // Convert base64 data URL to Blob URL — required for Safari/iPad to show all pages
       const dataUrl=plates[plateViewerIndex].data;
-      // Embed using full blob URL to get all pages
-      frame.src=dataUrl;
+      const base64=dataUrl.split(',')[1];
+      const binary=atob(base64);
+      const bytes=new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+      const blob=new Blob([bytes],{type:'application/pdf'});
+      const blobUrl=URL.createObjectURL(blob);
+      // Revoke previous blob URL to free memory
+      if(frame._currentBlobUrl) URL.revokeObjectURL(frame._currentBlobUrl);
+      frame._currentBlobUrl=blobUrl;
+      frame.src=blobUrl;
     }
   }
 
-  document.getElementById('plateViewerCloseBtn').onclick=function(){
+document.getElementById('plateViewerCloseBtn').onclick=function(){
+    const frame=document.getElementById('plateViewerFrame');
+    if(frame._currentBlobUrl){ URL.revokeObjectURL(frame._currentBlobUrl); frame._currentBlobUrl=null; }
+    frame.src='about:blank';
     document.getElementById('plateViewerOverlay').classList.remove('open');
-    document.getElementById('plateViewerFrame').src='about:blank';
     plateViewerWpId=null;
   };
   document.getElementById('plateViewerPrevBtn').onclick=function(){
