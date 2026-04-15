@@ -1879,18 +1879,26 @@ function renderWaypointListFiltered(filter){
         row.innerHTML=`<span style="flex:1;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${plate.name}</span>
           <button style="padding:4px 8px;background:rgba(0,170,255,0.12);border:1px solid rgba(0,170,255,0.4);color:#0af;border-radius:4px;font-size:11px;cursor:pointer" onclick="openPlateViewer(${wp.id},${i})">👁 VIEW</button>
           <button data-pidx="${i}" style="padding:4px 8px;background:rgba(255,23,68,0.12);border:1px solid rgba(255,23,68,0.4);color:#ff1744;border-radius:4px;font-size:11px;cursor:pointer">🗑 DEL</button>`;
-        row.querySelector('[data-pidx]').onclick=function(){
-          wp.plates.splice(i,1);saveLocal();renderEditPlateList();
+row.querySelector('[data-pidx]').onclick=async function(){
+          await deletePlateFromDb(wp.id,i);
+          wp.plates.splice(i,1);
+          // Reindex remaining plates in DB
+          await reindexPlatesInDb(wp.id,wp.plates.map(p=>p.name));
+          // Update dbIndex values in memory
+          wp.plates.forEach((p,idx)=>p.dbIndex=idx);
+          saveLocal();renderEditPlateList();
         };
         list.appendChild(row);
       });
     }
     renderEditPlateList();
-    editModal.querySelector('#plateFileInput').onchange=async function(){
+editModal.querySelector('#plateFileInput').onchange=async function(){
       if(!wp.plates)wp.plates=[];
       for(const file of Array.from(this.files)){
         const data=await readFileAsBase64(file);
-        wp.plates.push({name:file.name,data});
+        const plateIndex=wp.plates.length;
+        await savePlateToDb(wp.id,plateIndex,{name:file.name,data});
+        wp.plates.push({name:file.name,dbIndex:plateIndex});
       }
       saveLocal();renderEditPlateList();
       this.value='';
@@ -1934,8 +1942,9 @@ const plateCount=(wp.plates||[]).length;
   /* ================================================
      WAYPOINT CRUD
   ================================================ */
-  window.deleteWaypoint=function(id){
+window.deleteWaypoint=function(id){
     if(confirm('Delete this waypoint?')){
+      deleteAllPlatesForWaypoint(id); // clean up IndexedDB
       waypoints=waypoints.filter(w=>w.id!==id);map.removeLayer(markers[id]);delete markers[id];
       renderList();saveLocal();
     }
@@ -1949,14 +1958,14 @@ const plateCount=(wp.plates||[]).length;
       if(marker instanceof L.CircleMarker)marker.setStyle({color:isSelected?'#00f':markerType.color,fillColor:isSelected?'#00f':markerType.color});
     });
   };
-  function addWaypoint(lat,lon,name,markerType='default',info=''){
-    const id=Date.now()+Math.floor(999*Math.random());
-    const wp={id,lat,lon,name:name||'WP-'+(waypoints.length+1),markerType,info};
+function addWaypoint(lat,lon,name,markerType='default',info='',existingId=null){
+    const id=existingId||Date.now()+Math.floor(999*Math.random());
+    const wp={id,lat,lon,name:name||'WP-'+(waypoints.length+1),markerType,info,plates:[]};
     waypoints.push(wp);markers[id]=createMarkerForWaypoint(wp);renderList();saveLocal();
   }
-  function addWaypointNoSave(lat,lon,name,markerType='default',info=''){
-    const id=Date.now()+Math.floor(999*Math.random());
-    const wp={id,lat,lon,name:name||'WP-'+(waypoints.length+1),markerType,info};
+  function addWaypointNoSave(lat,lon,name,markerType='default',info='',existingId=null){
+    const id=existingId||Date.now()+Math.floor(999*Math.random());
+    const wp={id,lat,lon,name:name||'WP-'+(waypoints.length+1),markerType,info,plates:[]};
     waypoints.push(wp);markers[id]=createMarkerForWaypoint(wp);renderList();
   }
 
@@ -2553,7 +2562,7 @@ let plateViewerWpId=null, plateViewerIndex=0;
     return bytes;
   }
 
-  function renderPlateViewerPage(){
+function renderPlateViewerPage(){
     const wp=waypoints.find(w=>w.id===plateViewerWpId);
     if(!wp)return;
     const plates=wp.plates||[];
@@ -2564,31 +2573,43 @@ let plateViewerWpId=null, plateViewerIndex=0;
     document.getElementById('plateViewerCount').textContent=(plateViewerIndex+1)+' / '+plates.length;
 
     const container=document.getElementById('plateViewerCanvas');
-    container.innerHTML='<div id="plateLoadingMsg" style="color:#fff;font-family:monospace;margin-top:40px;font-size:14px">Loading PDF...</div>';
+    container.innerHTML='<div style="color:#fff;font-family:monospace;margin-top:40px;font-size:14px">Loading PDF...</div>';
     container.scrollTop=0;
 
-    const pdfData=base64ToUint8Array(plate.data);
-
-    pdfjsLib.getDocument({data:pdfData}).promise.then(function(pdf){
-      container.innerHTML='';
-      const totalPages=pdf.numPages;
-      // Render all pages sequentially
-      function renderPage(pageNum){
-        if(pageNum>totalPages)return;
-        pdf.getPage(pageNum).then(function(page){
-          const viewport=page.getViewport({scale: window.devicePixelRatio>=2 ? 2.5 : 2.0});
-          const canvas=document.createElement('canvas');
-          const ctx=canvas.getContext('2d');
-          canvas.width=viewport.width;
-          canvas.height=viewport.height;
-          canvas.style.width=Math.min(viewport.width, container.clientWidth-20)+'px';
-          canvas.style.height='auto';
-          container.appendChild(canvas);
-          page.render({canvasContext:ctx,viewport:viewport}).promise.then(function(){
-            renderPage(pageNum+1);
-          });
-        });
+    // Load PDF binary from IndexedDB
+    getPlateFromDb(wp.id,plate.dbIndex!==undefined?plate.dbIndex:plateViewerIndex).then(function(plateRecord){
+      if(!plateRecord||!plateRecord.data){
+        container.innerHTML='<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px">Plate data not found. Please re-add this PDF.</div>';
+        return;
       }
+      const pdfData=base64ToUint8Array(plateRecord.data);
+pdfjsLib.getDocument({data:pdfData}).promise.then(function(pdf){
+        container.innerHTML='';
+        const totalPages=pdf.numPages;
+        function renderPage(pageNum){
+          if(pageNum>totalPages)return;
+          pdf.getPage(pageNum).then(function(page){
+            const viewport=page.getViewport({scale:window.devicePixelRatio>=2?2.5:2.0});
+            const canvas=document.createElement('canvas');
+            const ctx=canvas.getContext('2d');
+            canvas.width=viewport.width;
+            canvas.height=viewport.height;
+            canvas.style.width=Math.min(viewport.width,container.clientWidth-20)+'px';
+            canvas.style.height='auto';
+            container.appendChild(canvas);
+            page.render({canvasContext:ctx,viewport:viewport}).promise.then(function(){
+              renderPage(pageNum+1);
+            });
+          });
+        }
+        renderPage(1);
+      }).catch(function(err){
+        container.innerHTML='<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px">Error loading PDF: '+err.message+'</div>';
+      });
+    }).catch(function(){
+      container.innerHTML='<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px">Could not load plate from storage.</div>';
+    });
+  }
       renderPage(1);
     }).catch(function(err){
       container.innerHTML='<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px">Error loading PDF: '+err.message+'</div>';
@@ -2611,7 +2632,7 @@ let plateViewerWpId=null, plateViewerIndex=0;
     if(plateViewerIndex<(wp.plates||[]).length-1){plateViewerIndex++;renderPlateViewerPage();}
   };
 
-  function readFileAsBase64(file){
+function readFileAsBase64(file){
     return new Promise((resolve,reject)=>{
       const reader=new FileReader();
       reader.onload=e=>resolve(e.target.result);
@@ -2619,19 +2640,150 @@ let plateViewerWpId=null, plateViewerIndex=0;
       reader.readAsDataURL(file);
     });
   }
+
+  /* ================================================
+     INDEXEDDB — Plate Storage (no size limit)
+  ================================================ */
+  const PLATE_DB_NAME='airnav_plates';
+  const PLATE_DB_VERSION=1;
+  const PLATE_STORE='plates';
+  let _plateDb=null;
+
+  function openPlateDb(){
+    return new Promise((resolve,reject)=>{
+      if(_plateDb){resolve(_plateDb);return;}
+      const req=indexedDB.open(PLATE_DB_NAME,PLATE_DB_VERSION);
+      req.onupgradeneeded=function(e){
+        const db=e.target.result;
+        if(!db.objectStoreNames.contains(PLATE_STORE)){
+          db.createObjectStore(PLATE_STORE,{keyPath:'key'});
+        }
+      };
+      req.onsuccess=function(e){_plateDb=e.target.result;resolve(_plateDb);};
+      req.onerror=function(e){reject(e.target.error);};
+    });
+  }
+
+  // key format: "wpId_plateIndex"
+  function savePlateToDb(wpId,plateIndex,plateObj){
+    return openPlateDb().then(db=>{
+      return new Promise((resolve,reject)=>{
+        const tx=db.transaction(PLATE_STORE,'readwrite');
+        const store=tx.objectStore(PLATE_STORE);
+        const req=store.put({key:wpId+'_'+plateIndex, name:plateObj.name, data:plateObj.data});
+        req.onsuccess=()=>resolve();
+        req.onerror=e=>reject(e.target.error);
+      });
+    });
+  }
+
+  function getPlateFromDb(wpId,plateIndex){
+    return openPlateDb().then(db=>{
+      return new Promise((resolve,reject)=>{
+        const tx=db.transaction(PLATE_STORE,'readonly');
+        const store=tx.objectStore(PLATE_STORE);
+        const req=store.get(wpId+'_'+plateIndex);
+        req.onsuccess=e=>resolve(e.target.result||null);
+        req.onerror=e=>reject(e.target.error);
+      });
+    });
+  }
+
+  function deletePlateFromDb(wpId,plateIndex){
+    return openPlateDb().then(db=>{
+      return new Promise((resolve,reject)=>{
+        const tx=db.transaction(PLATE_STORE,'readwrite');
+        const store=tx.objectStore(PLATE_STORE);
+        const req=store.delete(wpId+'_'+plateIndex);
+        req.onsuccess=()=>resolve();
+        req.onerror=e=>reject(e.target.error);
+      });
+    });
+  }
+
+  function getAllPlateKeysForWaypoint(wpId){
+    return openPlateDb().then(db=>{
+      return new Promise((resolve,reject)=>{
+        const tx=db.transaction(PLATE_STORE,'readonly');
+        const store=tx.objectStore(PLATE_STORE);
+        const req=store.getAll();
+        req.onsuccess=function(e){
+          const all=e.target.result||[];
+          resolve(all.filter(p=>p.key.startsWith(wpId+'_')));
+        };
+        req.onerror=e=>reject(e.target.error);
+      });
+    });
+  }
+
+  function deleteAllPlatesForWaypoint(wpId){
+    return getAllPlateKeysForWaypoint(wpId).then(plates=>{
+      return Promise.all(plates.map(p=>{
+        return openPlateDb().then(db=>{
+          return new Promise((resolve,reject)=>{
+            const tx=db.transaction(PLATE_STORE,'readwrite');
+            const store=tx.objectStore(PLATE_STORE);
+            const req=store.delete(p.key);
+            req.onsuccess=()=>resolve();
+            req.onerror=e=>reject(e.target.error);
+          });
+        });
+      }));
+    });
+  }
+
+  function reindexPlatesInDb(wpId,plateNames){
+    // After deletion, rewrite keys so indices stay sequential
+    return openPlateDb().then(db=>{
+      return new Promise((resolve,reject)=>{
+        const tx=db.transaction(PLATE_STORE,'readwrite');
+        const store=tx.objectStore(PLATE_STORE);
+        const req=store.getAll();
+        req.onsuccess=function(e){
+          const all=e.target.result||[];
+          const wpPlates=all.filter(p=>p.key.startsWith(wpId+'_'));
+          // Delete all existing keys for this wp
+          const delPromises=wpPlates.map(p=>new Promise((res,rej)=>{
+            const r=store.delete(p.key);r.onsuccess=res;r.onerror=rej;
+          }));
+          Promise.all(delPromises).then(()=>{
+            // Re-save with correct indices matching plateNames order
+            const putPromises=plateNames.map((name,i)=>{
+              const existing=wpPlates.find(p=>p.name===name);
+              if(!existing)return Promise.resolve();
+              return new Promise((res,rej)=>{
+                const r=store.put({key:wpId+'_'+i,name:existing.name,data:existing.data});
+                r.onsuccess=res;r.onerror=rej;
+              });
+            });
+            Promise.all(putPromises).then(resolve).catch(reject);
+          }).catch(reject);
+        };
+        req.onerror=e=>reject(e.target.error);
+      });
+    });
+  }
 function saveLocal(){
     try{
-      localStorage.setItem('map_waypoints_v6',JSON.stringify(waypoints));
+      // Strip plate binary data before saving to localStorage — plates live in IndexedDB
+      const waypointsForStorage=waypoints.map(w=>{
+        const copy=Object.assign({},w);
+        // Only save plate metadata (name + index), not binary data
+        copy.plates=(w.plates||[]).map((p,i)=>({name:p.name,dbIndex:i}));
+        return copy;
+      });
+      localStorage.setItem('map_waypoints_v6',JSON.stringify(waypointsForStorage));
       localStorage.setItem('map_areas_v3',JSON.stringify(areas));
       localStorage.setItem('map_area_visible',JSON.stringify(areaVisible));
-    }catch(e){alert('Error saving data: '+e.message+'\n\nIf storage is full, delete some approach plates PDFs.');}
+    }catch(e){alert('Error saving data: '+e.message);}
   }
-  function loadLocal(){
+function loadLocal(){
     const data=localStorage.getItem('map_waypoints_v6');
     if(data)try{const arr=JSON.parse(data);arr.forEach(w=>{
       const id=Date.now()+Math.floor(999*Math.random());
-      const wp={id,lat:w.lat,lon:w.lon,name:w.name||'WP-'+(waypoints.length+1),markerType:w.markerType||'default',info:w.info||'',plates:w.plates||[]};
-      waypoints.push(wp);markers[id]=createMarkerForWaypoint(wp);renderList();
+      // plates array only holds {name, dbIndex} — actual data fetched from IndexedDB on demand
+      const wp={id:w.id||id,lat:w.lat,lon:w.lon,name:w.name||'WP-'+(waypoints.length+1),markerType:w.markerType||'default',info:w.info||'',plates:w.plates||[]};
+      waypoints.push(wp);markers[wp.id]=createMarkerForWaypoint(wp);renderList();
     });}catch(e){}
     // Restore saved visibility states
     const savedVis=localStorage.getItem('map_area_visible');
