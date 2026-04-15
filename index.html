@@ -2603,17 +2603,12 @@ pdfjsLib.getDocument({data:pdfData}).promise.then(function(pdf){
             });
           });
         }
-        renderPage(1);
+renderPage(1);
       }).catch(function(err){
         container.innerHTML='<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px">Error loading PDF: '+err.message+'</div>';
       });
     }).catch(function(){
       container.innerHTML='<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px">Could not load plate from storage.</div>';
-    });
-  }
-      renderPage(1);
-    }).catch(function(err){
-      container.innerHTML='<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px">Error loading PDF: '+err.message+'</div>';
     });
   }
 
