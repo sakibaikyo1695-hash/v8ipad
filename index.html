@@ -1412,6 +1412,7 @@ function createHelicopterIcon(heading){
    MAIN APP
 ==================================================== */
 function initializeApp(){
+  attachPostLoginHandlers();
   const insecureOverlay=document.getElementById('insecureOverlay');
   function checkSecureContextAndWarn(){
     const isLocalhost='localhost'===location.hostname||'127.0.0.1'===location.hostname;
@@ -3441,20 +3442,21 @@ if('serviceWorker'in navigator){
   updateClocks();
   setInterval(updateClocks,1000);
 })();
-  // Area visibility accordion
-document.getElementById('areaVisToggle').onclick=function(){
-  const panel=document.getElementById('areaVisPanel');
-  const arrow=document.getElementById('areaVisArrow');
-  const open=panel.style.display==='block';
-  panel.style.display=open?'none':'block';
-  arrow.textContent=open?'▶ EXPAND':'▼ COLLAPSE';
-};
-  // ---- USER GUIDE ----
-document.getElementById('userGuideBtn').onclick=function(){
-  document.getElementById('userGuideModal').style.display='block';
-};
-document.getElementById('closeUserGuideBtn').onclick=function(){
-  document.getElementById('userGuideModal').style.display='none';
+  // Area visibility accordion + User Guide — attached after login
+window.attachPostLoginHandlers = function(){
+  document.getElementById('areaVisToggle').onclick=function(){
+    const panel=document.getElementById('areaVisPanel');
+    const arrow=document.getElementById('areaVisArrow');
+    const open=panel.style.display==='block';
+    panel.style.display=open?'none':'block';
+    arrow.textContent=open?'▶ EXPAND':'▼ COLLAPSE';
+  };
+  document.getElementById('userGuideBtn').onclick=function(){
+    document.getElementById('userGuideModal').style.display='block';
+  };
+  document.getElementById('closeUserGuideBtn').onclick=function(){
+    document.getElementById('userGuideModal').style.display='none';
+  };
 };
   // ---- SPLASH SCREEN LOGIC ----
 (function(){
