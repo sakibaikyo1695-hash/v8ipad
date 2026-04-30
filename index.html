@@ -1030,6 +1030,44 @@ textarea{resize:vertical;min-height:55px}
     <div style="font-size:10px;color:var(--text-dim);margin-top:4px;font-family:var(--font-mono)">Tap map to capture coordinates</div>
   </div>
 
+  <!-- FUEL CALCULATOR SIDEBAR -->
+  <div class="section">
+    <div class="section-label" id="fuelCalcToggle" style="cursor:pointer;user-select:none">
+      ⛽ Fuel Calculator
+      <span id="fuelCalcArrow" style="margin-left:auto;color:var(--accent-amber);font-size:11px">▶ EXPAND</span>
+    </div>
+    <div id="fuelCalcPanel" style="display:none;margin-top:6px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <div id="fcAcBtn_109E" onclick="fcSelectAc('109E')" style="border:1px solid var(--accent-amber);border-radius:5px;padding:7px 4px;text-align:center;cursor:pointer;background:rgba(255,171,0,0.18);font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--accent-amber)">AW109E</div>
+        <div id="fcAcBtn_109SP" onclick="fcSelectAc('109SP')" style="border:1px solid var(--border-dim);border-radius:5px;padding:7px 4px;text-align:center;cursor:pointer;background:transparent;font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--text-dim)">AW109SP<br><span style="font-size:8px;letter-spacing:1px">UNDER DEV</span></div>
+      </div>
+      <div id="fcPanel_109E">
+        <div style="background:var(--bg-deep);border-radius:5px;padding:8px 10px;margin-bottom:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">
+          Cons: <span style="color:var(--accent-amber)">3.5 kg/min</span> &nbsp;|&nbsp; Max Fuel: <span style="color:var(--accent-cyan)">550 kg</span> &nbsp;|&nbsp; Safety: <span style="color:var(--accent-red)">100 kg</span>
+        </div>
+        <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">FUEL IN HELICOPTER (KG)</label>
+        <input type="number" id="fc_fuel_in_helo" min="0" max="550" placeholder="e.g. 150" style="margin-bottom:6px" oninput="fcCalc()"/>
+        <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">INTENDED FUEL TAKEN (KG)</label>
+        <input type="number" id="fc_intended_fuel" min="0" max="550" placeholder="e.g. 400" style="margin-bottom:6px" oninput="fcCalc()"/>
+        <div id="fc_result" style="background:var(--bg-deep);border-radius:5px;padding:8px 10px;font-family:var(--font-mono);font-size:11px;line-height:1.9;margin-top:2px">
+          <span style="color:var(--text-dim)">Enter values above</span>
+        </div>
+      </div>
+      <div id="fcPanel_109SP" style="display:none">
+        <div style="background:var(--bg-deep);border-radius:5px;padding:8px 10px;margin-bottom:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">
+          Cons: <span style="color:var(--accent-amber)">3.5 kg/min</span> &nbsp;|&nbsp; Max Fuel: <span style="color:var(--accent-cyan)">520 kg</span> &nbsp;|&nbsp; Safety: <span style="color:var(--accent-red)">100 kg</span>
+        </div>
+        <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">FUEL IN HELICOPTER (KG)</label>
+        <input type="number" id="fc_fuel_in_helo_sp" min="0" max="520" placeholder="e.g. 150" style="margin-bottom:6px" oninput="fcCalcSP()"/>
+        <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">INTENDED FUEL TAKEN (KG)</label>
+        <input type="number" id="fc_intended_fuel_sp" min="0" max="520" placeholder="e.g. 380" style="margin-bottom:6px" oninput="fcCalcSP()"/>
+        <div id="fc_result_sp" style="background:var(--bg-deep);border-radius:5px;padding:8px 10px;font-family:var(--font-mono);font-size:11px;line-height:1.9;margin-top:2px">
+          <span style="color:var(--text-dim)">Enter values above</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
  <!-- PRINT FLIGHT BRIEF -->
   <div class="section" style="padding-bottom:14px">
     <a id="printBriefBtn" class="btn full" style="background:rgba(255,171,0,0.18);border-color:rgba(255,171,0,0.7);color:#ffab00;font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:2px;padding:12px;box-shadow:0 0 14px rgba(255,171,0,0.2)">🖨️ PRINT BRIEF</a>
@@ -1187,45 +1225,300 @@ textarea{resize:vertical;min-height:55px}
   </div>
 </div>
 <!-- FLIGHT BRIEF MODAL -->
-<div id="briefModal" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:10000;display:none;padding:16px;overflow:auto;backdrop-filter:blur(4px)">
-  <div class="modal-content" style="max-width:640px;font-family:var(--font-ui)">
-    <h3>🖨️ FLIGHT BRIEFING SHEET</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div id="briefModal" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:10000;display:none;padding:12px;overflow:auto;backdrop-filter:blur(6px)">
+  <div class="modal-content" style="max-width:700px;font-family:var(--font-ui);padding:16px 18px">
 
-      <div><label>CALLSIGN</label><input type="text" id="bf_callsign" placeholder="e.g. TIGER 01"/></div>
-      <div><label>AIRCRAFT</label><input type="text" id="bf_aircraft" placeholder="e.g. AW-139"/></div>
-      <div><label>PILOT</label><input type="text" id="bf_pilot" placeholder="Name / Rank"/></div>
-      <div><label>CO-PILOT</label><input type="text" id="bf_copilot" placeholder="Name / Rank"/></div>
-      <div><label>REAR CREW</label><input type="text" id="bf_rearcrew" placeholder="Name / Rank"/></div>
-      <div><label>MISSION</label><input type="text" id="bf_mission" placeholder="e.g. SAR / MEDEVAC"/></div>
-      <div><label>ETD (LOCAL)</label><input type="text" id="bf_etd" placeholder="e.g. 0830L"/></div>
-      <div><label>DURATION (MIN)</label><input type="number" id="bf_duration" placeholder="e.g. 90"/></div>
-      <div><label>AUW (KG)</label><input type="text" id="bf_auw" placeholder="e.g. 6200"/></div>
-      <div><label>ALTITUDE (FT)</label><input type="text" id="bf_altitude" placeholder="e.g. 1500 ft MSL"/></div>
-      <div><label>FUEL TAKEN (LTR)</label><input type="number" id="bf_fuel" placeholder="e.g. 800" oninput="calcEndurance()"/></div>
-      <div><label>FUEL CONS RATE (LTR/HR)</label><input type="number" id="bf_fuelrate" placeholder="e.g. 350" oninput="calcEndurance()"/></div>
-      <div><label>ENDURANCE</label><input type="text" id="bf_endurance" placeholder="Auto-calculated" readonly style="background:rgba(0,230,118,0.07);border-color:rgba(0,230,118,0.3);color:var(--accent-green)"/></div>
-      <div><label>FREQUENCIES</label><input type="text" id="bf_freq" placeholder="e.g. 122.8 / 243.0"/></div>
-
+    <!-- STEP INDICATOR -->
+    <div style="display:flex;align-items:center;gap:0;margin-bottom:14px;border-radius:6px;overflow:hidden;border:1px solid var(--border-glow)">
+      <div class="bf-step-ind" id="stepInd1" style="flex:1;padding:7px 4px;text-align:center;font-family:var(--font-display);font-size:9px;letter-spacing:1px;background:rgba(255,171,0,0.25);color:var(--accent-amber);border-right:1px solid var(--border-glow)">1·AIRCRAFT</div>
+      <div class="bf-step-ind" id="stepInd2" style="flex:1;padding:7px 4px;text-align:center;font-family:var(--font-display);font-size:9px;letter-spacing:1px;background:transparent;color:var(--text-dim);border-right:1px solid var(--border-glow)">2·EQUIPMENT</div>
+      <div class="bf-step-ind" id="stepInd3" style="flex:1;padding:7px 4px;text-align:center;font-family:var(--font-display);font-size:9px;letter-spacing:1px;background:transparent;color:var(--text-dim);border-right:1px solid var(--border-glow)">3·ROUTE&amp;FUEL</div>
+      <div class="bf-step-ind" id="stepInd4" style="flex:1;padding:7px 4px;text-align:center;font-family:var(--font-display);font-size:9px;letter-spacing:1px;background:transparent;color:var(--text-dim);border-right:1px solid var(--border-glow)">4·CG</div>
+      <div class="bf-step-ind" id="stepInd5" style="flex:1;padding:7px 4px;text-align:center;font-family:var(--font-display);font-size:9px;letter-spacing:1px;background:transparent;color:var(--text-dim)">5·BRIEFING</div>
     </div>
 
-    <div style="margin-top:8px"><label>WEATHER</label></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><label>AIRFIELD STATE</label><input type="text" id="bf_wx_airfield" placeholder="e.g. OPEN / CLOSED"/></div>
-      <div><label>DEP VISIBILITY</label><input type="text" id="bf_wx_depvis" placeholder="e.g. 5000M"/></div>
-      <div><label>DEST VISIBILITY</label><input type="text" id="bf_wx_destvis" placeholder="e.g. 8KM"/></div>
-      <div><label>CLOUD</label><input type="text" id="bf_wx_cloud" placeholder="e.g. FEW 2500ft"/></div>
-      <div><label>WIND</label><input type="text" id="bf_wx_wind" placeholder="e.g. 270/15KT"/></div>
-      <div><label>WEATHER WARNING</label><input type="text" id="bf_wx_warn" placeholder="e.g. THUNDERSTORM AREA"/></div>
+    <!-- ========== STEP 1: AIRCRAFT ========== -->
+    <div id="bfStep1">
+      <h3 style="margin:0 0 12px;font-family:var(--font-display);font-size:13px;letter-spacing:2px">🚁 SELECT AIRCRAFT</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div id="bfAcBtn_109E" onclick="bfSelectAc('109E')" style="border:2px solid var(--accent-amber);border-radius:8px;padding:16px 10px;text-align:center;cursor:pointer;background:rgba(255,171,0,0.18)">
+          <div style="font-family:var(--font-display);font-size:15px;font-weight:900;color:var(--accent-amber)">AW109E</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:4px">Cons: 3.5 kg/min<br>Max AUW: 3030 kg<br>Max Fuel: 550 kg</div>
+        </div>
+        <div id="bfAcBtn_109SP" onclick="bfSelectAc('109SP')" style="border:2px solid var(--border-dim);border-radius:8px;padding:16px 10px;text-align:center;cursor:pointer;background:transparent;opacity:1">
+          <div style="font-family:var(--font-display);font-size:15px;font-weight:900;color:var(--text-dim)">AW109SP</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:4px">Cons: 3.5 kg/min<br>Max AUW: 3175 kg<br>Max Fuel: 520 kg</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn btn-blue" onclick="bfGoStep(2)" style="padding:8px 24px;font-family:var(--font-display);font-size:11px;letter-spacing:1px">NEXT →</button>
+        <button class="btn btn-red" id="closeBriefBtn" style="padding:8px 20px;margin-left:8px">✖ CLOSE</button>
+      </div>
     </div>
 
-    <div style="margin-top:8px"><label>NOTAM</label><textarea id="bf_notam" rows="3" placeholder="Enter relevant NOTAMs..."></textarea></div>
-    <div style="margin-top:4px"><label>SPECIAL NOTE</label><textarea id="bf_special" rows="2" placeholder="Any special instructions..."></textarea></div>
-
-    <div class="btn-row" style="margin-top:16px;justify-content:center">
-      <button class="btn btn-amber" id="doPrintBriefBtn" style="padding:10px 28px;font-size:13px;letter-spacing:1px">🖨️ PRINT / SAVE PDF</button>
-      <button class="btn btn-red" id="closeBriefBtn" style="padding:10px 28px">✖ CLOSE</button>
+    <!-- ========== STEP 2: EQUIPMENT ========== -->
+    <div id="bfStep2" style="display:none">
+      <h3 style="margin:0 0 10px;font-family:var(--font-display);font-size:12px;letter-spacing:2px">⚙️ EQUIPMENT ON BOARD — <span id="bfAcLabel" style="color:var(--accent-amber)">AW109E</span></h3>
+      <div style="background:var(--bg-deep);border-radius:5px;padding:7px 10px;margin-bottom:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">
+        Basic Weight: <span id="bfBasicWtLabel" style="color:var(--accent-cyan)">2164.35 kg</span> <span id="bfBasicWtNote" style="color:var(--text-dim);font-size:10px">(Fwd Seat fitted)</span>
+        &nbsp;|&nbsp; 2× Crew: <span style="color:var(--accent-cyan)">150 kg</span> &nbsp;|&nbsp; Max AUW: <span id="bfMaxAuwLabel" style="color:var(--accent-amber)">3030 kg</span>
+      </div>
+      <!-- AW109E: fwd seat toggle -->
+      <div id="bfFwdSeatDiv" style="margin-bottom:10px">
+        <button id="bfFwdSeatBtn" onclick="bfToggleFwdSeat()" style="background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.5);color:var(--accent-green);border-radius:5px;padding:6px 14px;font-family:var(--font-mono);font-size:11px;cursor:pointer;width:100%;text-align:left">
+          ✅ Fwd Seat FITTED &nbsp;<span style="color:var(--text-dim);font-size:10px">(18.00 kg included in basic weight — tap to remove)</span>
+        </button>
+      </div>
+      <!-- AW109SP: removable items from basic weight -->
+      <div id="bfSpRemovableDiv" style="display:none;margin-bottom:8px">
+        <div style="font-size:10px;letter-spacing:1px;color:var(--accent-amber);margin-bottom:4px">ITEMS IN BASIC WT — UNCHECK TO REMOVE</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11px;margin-bottom:6px">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_rm_cushion" checked onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Normal Seat Cushion <span style="color:var(--text-dim);font-size:9px;margin-left:auto">10.00 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_rm_flir" checked onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> FLIR Removable Parts <span style="color:var(--text-dim);font-size:9px;margin-left:auto">25.21 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_rm_rearseat3" checked onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Rear Seat 3-Place <span style="color:var(--text-dim);font-size:9px;margin-left:auto">33.52 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_rm_rearseat1" checked onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Rear Seat 1-Place <span style="color:var(--text-dim);font-size:9px;margin-left:auto">11.17 kg</span></label>
+        </div>
+        <div style="font-size:10px;letter-spacing:1px;color:var(--accent-amber);margin-bottom:4px">FORWARD SEAT</div>
+        <div style="margin-bottom:6px">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.2);border-radius:4px;padding:4px 8px">
+            <input type="checkbox" id="sp_fwdseat_chk" checked onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)">
+            Pax Compartment Fwd Seat
+            <span style="color:var(--text-dim);font-size:9px;margin-left:auto">46.61 kg &nbsp;|&nbsp; STA 2200 mm</span>
+          </label>
+        </div>
+      </div>
+      <!-- AW109SP mission equipment -->
+      <div id="bfSpEquipDiv" style="display:none;margin-bottom:10px">
+        <div style="font-size:10px;letter-spacing:1px;color:var(--accent-amber);margin-bottom:4px">MISSION EQUIPMENT</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11px">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_floats" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Emergency Floats <span style="color:var(--text-dim);font-size:9px;margin-left:auto">107.12 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_nightsun" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Night Sun <span style="color:var(--text-dim);font-size:9px;margin-left:auto">32.68 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_winch" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Winch <span style="color:var(--text-dim);font-size:9px;margin-left:auto">64.99 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_cargohook" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Cargo Hook <span style="color:var(--text-dim);font-size:9px;margin-left:auto">12.70 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_flirconsole" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> FLIR Mission Console <span style="color:var(--text-dim);font-size:9px;margin-left:auto">27.64 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_vipseat" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> VIP Seat Cushion <span style="color:var(--text-dim);font-size:9px;margin-left:auto">25.00 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_stretcher" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Stretcher <span style="color:var(--text-dim);font-size:9px;margin-left:auto">26.13 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_oxygen" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Oxygen Bottle <span style="color:var(--text-dim);font-size:9px;margin-left:auto">25.00 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_gunpintle" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Gun Pintle <span style="color:var(--text-dim);font-size:9px;margin-left:auto">23.20 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_gun" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Gun <span style="color:var(--text-dim);font-size:9px;margin-left:auto">12.80 kg</span></label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="sp_towbar" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Tow Bar <span style="color:var(--text-dim);font-size:9px;margin-left:auto">12.00 kg</span></label>
+          <div></div>
+        </div>
+        <div style="font-size:10px;letter-spacing:1px;color:var(--accent-amber);margin:6px 0 3px">LIFE JACKETS</div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:5px;align-items:center">
+          <input type="number" id="sp_lj_count" min="0" max="10" value="0" onchange="bfWbUpdate()" style="width:100%"/>
+          <div style="font-size:10px;color:var(--text-secondary)">× 2.50 kg each (STA 2500 mm)</div>
+        </div>
+        <div style="font-size:10px;letter-spacing:1px;color:var(--accent-amber);margin:6px 0 3px">ADDITIONAL ITEMS (BLANK)</div>
+        <div id="sp_extra_rows" style="display:grid;gap:4px">
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px;font-size:10px">
+            <input type="text" id="sp_ex1_name" placeholder="Item name" oninput="bfWbUpdate()" style="font-size:10px"/>
+            <input type="number" id="sp_ex1_wt" placeholder="kg" min="0" oninput="bfWbUpdate()" style="font-size:10px"/>
+            <input type="number" id="sp_ex1_arm" placeholder="arm mm" oninput="bfWbUpdate()" style="font-size:10px"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px;font-size:10px">
+            <input type="text" id="sp_ex2_name" placeholder="Item name" oninput="bfWbUpdate()" style="font-size:10px"/>
+            <input type="number" id="sp_ex2_wt" placeholder="kg" min="0" oninput="bfWbUpdate()" style="font-size:10px"/>
+            <input type="number" id="sp_ex2_arm" placeholder="arm mm" oninput="bfWbUpdate()" style="font-size:10px"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px;font-size:10px">
+            <input type="text" id="sp_ex3_name" placeholder="Item name" oninput="bfWbUpdate()" style="font-size:10px"/>
+            <input type="number" id="sp_ex3_wt" placeholder="kg" min="0" oninput="bfWbUpdate()" style="font-size:10px"/>
+            <input type="number" id="sp_ex3_arm" placeholder="arm mm" oninput="bfWbUpdate()" style="font-size:10px"/>
+          </div>
+        </div>
+      </div>
+      <!-- AW109E equipment list — hidden when SP selected -->
+      <div id="bfEEquipDiv">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:12px;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_floats" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Emergency Floats <span style="color:var(--text-dim);font-size:10px;margin-left:auto">57.54 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_nightsun" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Night Sun <span style="color:var(--text-dim);font-size:10px;margin-left:auto">20.62 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_winch" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Winch <span style="color:var(--text-dim);font-size:10px;margin-left:auto">46.00 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_cargohook" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Cargo Hook <span style="color:var(--text-dim);font-size:10px;margin-left:auto">10.70 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_praft" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Pilot Life Raft <span style="color:var(--text-dim);font-size:10px;margin-left:auto">3.75 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_cpraft" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Co-Pilot Life Raft <span style="color:var(--text-dim);font-size:10px;margin-left:auto">3.75 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_pxraft" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Passenger Life Raft <span style="color:var(--text-dim);font-size:10px;margin-left:auto">20.00 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_lj1" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Life Jacket ×1 <span style="color:var(--text-dim);font-size:10px;margin-left:auto">2.50 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_lj2" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Life Jacket ×2 <span style="color:var(--text-dim);font-size:10px;margin-left:auto">2.50 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_lj3" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Life Jacket ×3 <span style="color:var(--text-dim);font-size:10px;margin-left:auto">2.50 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_lj4" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Life Jacket ×4 <span style="color:var(--text-dim);font-size:10px;margin-left:auto">2.50 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_lj5" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Life Jacket ×5 <span style="color:var(--text-dim);font-size:10px;margin-left:auto">2.50 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_gun" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Gun <span style="color:var(--text-dim);font-size:10px;margin-left:auto">12.00 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_pintle" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Gun Pintle <span style="color:var(--text-dim);font-size:10px;margin-left:auto">18.00 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_vipseat" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> VIP Seat <span style="color:var(--text-dim);font-size:10px;margin-left:auto">16.00 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_fuelpump" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Fuel Transfer Pump <span style="color:var(--text-dim);font-size:10px;margin-left:auto">23.00 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_handpump" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Hand Pump <span style="color:var(--text-dim);font-size:10px;margin-left:auto">1.00 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_pumpbat" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Pump Battery <span style="color:var(--text-dim);font-size:10px;margin-left:auto">24.00 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_towbar" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Tow Bar <span style="color:var(--text-dim);font-size:10px;margin-left:auto">12.00 kg</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 0"><input type="checkbox" id="wb_securing" onchange="bfWbUpdate()" style="accent-color:var(--accent-amber)"> Heli Securing Items <span style="color:var(--text-dim);font-size:10px;margin-left:auto">8.00 kg</span></label>
+      </div>
+      </div><!-- end bfEEquipDiv -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+        <div>
+          <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">PASSENGERS</label>
+          <input type="number" id="wb_pax" min="0" max="4" value="0" onchange="bfWbUpdate()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">BAGGAGE (KG)</label>
+          <input type="number" id="wb_baggage" min="0" value="0" onchange="bfWbUpdate()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">SUPPORT ITEMS (KG)</label>
+          <input type="number" id="wb_support" min="0" value="0" onchange="bfWbUpdate()" style="width:100%"/>
+        </div>
+      </div>
+      <!-- Weight summary box -->
+      <div id="bfWbSummary" style="background:var(--bg-deep);border-radius:5px;padding:9px 12px;font-family:var(--font-mono);font-size:12px;line-height:1.9;margin-bottom:10px">
+        <span style="color:var(--text-dim)">Select equipment above...</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <button class="btn" onclick="bfGoStep(1)" style="padding:8px 20px">← BACK</button>
+        <button class="btn btn-blue" onclick="bfGoStep(3)" style="padding:8px 24px;font-family:var(--font-display);font-size:11px;letter-spacing:1px">NEXT →</button>
+      </div>
     </div>
+
+    <!-- ========== STEP 3: ROUTE & FUEL ========== -->
+    <div id="bfStep3" style="display:none">
+      <h3 style="margin:0 0 10px;font-family:var(--font-display);font-size:12px;letter-spacing:2px">⛽ ROUTE &amp; FUEL CALCULATION</h3>
+      <!-- Route display -->
+      <div id="bfRouteDisplay" style="background:var(--bg-deep);border-radius:5px;padding:8px 10px;margin-bottom:10px;font-family:var(--font-mono);font-size:11px;max-height:140px;overflow-y:auto"></div>
+      <!-- Hold options per waypoint -->
+      <div id="bfHoldSection" style="margin-bottom:10px;display:none">
+        <div style="font-size:10px;letter-spacing:1px;color:var(--accent-amber);margin-bottom:6px">HOLDING TIME AT WAYPOINTS (MIN)</div>
+        <div id="bfHoldInputs" style="display:grid;grid-template-columns:1fr 1fr;gap:5px"></div>
+      </div>
+      <!-- Cruise speed -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">CRUISE SPEED (KTS)</label>
+          <input type="number" id="bf_cruise_kts" min="1" value="100" oninput="bfFuelCalc()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">FLIGHT TYPE</label>
+          <select id="bf_flight_type" onchange="bfFuelCalc()" style="width:100%;background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-glow);border-radius:var(--radius);padding:7px 8px;font-family:var(--font-ui)">
+            <option value="oneway">One Way</option>
+            <option value="return">Round Trip (Return)</option>
+          </select>
+        </div>
+      </div>
+      <!-- Fuel calc results -->
+      <div id="bfFuelResult" style="background:var(--bg-deep);border-radius:5px;padding:10px 12px;font-family:var(--font-mono);font-size:12px;line-height:1.9;margin-bottom:10px">
+        <span style="color:var(--text-dim)">Route data loading...</span>
+      </div>
+      <!-- Fuel taken input -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">FUEL TAKEN (KG)</label>
+          <input type="number" id="bf_fuel_taken" min="0" max="550" placeholder="Enter fuel taken" oninput="bfFuelCalc()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">FUEL IN HELO NOW (KG)</label>
+          <input type="number" id="bf_fuel_in_helo" min="0" max="550" value="0" oninput="bfFuelCalc()" style="width:100%"/>
+        </div>
+      </div>
+      <!-- Fuel status -->
+      <div id="bfFuelStatus" style="background:var(--bg-deep);border-radius:5px;padding:10px 12px;font-family:var(--font-mono);font-size:12px;line-height:1.9;margin-bottom:10px"></div>
+      <div style="display:flex;justify-content:space-between">
+        <button class="btn" onclick="bfGoStep(2)" style="padding:8px 20px">← BACK</button>
+        <button class="btn btn-blue" onclick="bfGoStep(4)" style="padding:8px 24px;font-family:var(--font-display);font-size:11px;letter-spacing:1px">NEXT →</button>
+      </div>
+    </div>
+
+    <!-- ========== STEP 4: CG CALCULATION ========== -->
+    <div id="bfStep4" style="display:none">
+      <h3 style="margin:0 0 10px;font-family:var(--font-display);font-size:12px;letter-spacing:2px">📐 CENTRE OF GRAVITY — <span id="bfCgAcLabel" style="color:var(--accent-amber)">AW109E</span></h3>
+      <div style="background:var(--bg-deep);border-radius:5px;padding:7px 10px;margin-bottom:8px;font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);line-height:1.7">
+        All weights in <span style="color:var(--accent-cyan)">kg</span>. Station arms per RFM. Enter actual weight at each station.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <div style="grid-column:1/-1;font-size:10px;letter-spacing:1px;color:var(--accent-amber)">CREW</div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_pilot_lbl">PILOT (arm 1585 mm)</label>
+          <input type="number" id="cg_pilot" value="75" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_copilot_lbl">CO-PILOT (arm 1585 mm)</label>
+          <input type="number" id="cg_copilot" value="75" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+        <div style="grid-column:1/-1;font-size:10px;letter-spacing:1px;color:var(--accent-amber);margin-top:4px">PASSENGER CABIN</div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_fwdl_lbl">FWD-LEFT (arm 2455 mm)</label>
+          <input type="number" id="cg_fwdl" value="0" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_fwdc_lbl">FWD-CENTRE (arm 2455 mm)</label>
+          <input type="number" id="cg_fwdc" value="0" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_fwdr_lbl">FWD-RIGHT (arm 2455 mm)</label>
+          <input type="number" id="cg_fwdr" value="0" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_aftl_lbl">AFT-LEFT (arm 3200 mm)</label>
+          <input type="number" id="cg_aftl" value="0" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_aftc_lbl">AFT-CENTRE (arm 3200 mm)</label>
+          <input type="number" id="cg_aftc" value="0" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_aftr_lbl">AFT-RIGHT (arm 3200 mm)</label>
+          <input type="number" id="cg_aftr" value="0" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+        <div style="grid-column:1/-1;font-size:10px;letter-spacing:1px;color:var(--accent-amber);margin-top:4px">BAGGAGE &amp; FUEL</div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_bag_lbl">BAGGAGE (arm 5696 mm)</label>
+          <input type="number" id="cg_bag" value="0" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:9px;color:var(--text-secondary)" id="cg_fuel_lbl">TAKE-OFF FUEL (arm 3865 mm)</label>
+          <input type="number" id="cg_fuel_to" value="0" oninput="bfCgCalc()" style="width:100%"/>
+        </div>
+      </div>
+      <!-- CG results panel -->
+      <div id="bfCgResult" style="background:var(--bg-deep);border-radius:5px;padding:10px 12px;font-family:var(--font-mono);font-size:11px;line-height:1.9;margin-bottom:10px">
+        <span style="color:var(--text-dim)">Fill in weights above...</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <button class="btn" onclick="bfGoStep(3)" style="padding:8px 20px">← BACK</button>
+        <button class="btn btn-blue" onclick="bfGoStep(5)" style="padding:8px 24px;font-family:var(--font-display);font-size:11px;letter-spacing:1px">NEXT →</button>
+      </div>
+    </div>
+
+    <!-- ========== STEP 5: BRIEFING DETAILS ========== -->
+    <div id="bfStep5" style="display:none">
+      <h3 style="margin:0 0 10px;font-family:var(--font-display);font-size:12px;letter-spacing:2px">🖨️ FLIGHT BRIEFING DETAILS</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label>CALLSIGN</label><input type="text" id="bf_callsign" placeholder="e.g. TIGER 01"/></div>
+        <div><label>MISSION</label><input type="text" id="bf_mission" placeholder="e.g. SAR / MEDEVAC"/></div>
+        <div><label>PILOT</label><input type="text" id="bf_pilot" placeholder="Name / Rank"/></div>
+        <div><label>CO-PILOT</label><input type="text" id="bf_copilot" placeholder="Name / Rank"/></div>
+        <div><label>REAR CREW</label><input type="text" id="bf_rearcrew" placeholder="Name / Rank"/></div>
+        <div><label>ETD (LOCAL)</label><input type="text" id="bf_etd" placeholder="e.g. 0830L"/></div>
+        <div><label>ALTITUDE (FT)</label><input type="text" id="bf_altitude" placeholder="e.g. 1500 ft MSL"/></div>
+        <div><label>FREQUENCIES</label><input type="text" id="bf_freq" placeholder="e.g. 122.8 / 243.0"/></div>
+      </div>
+      <div style="margin-top:8px"><label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">WEATHER</label></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+        <div><label>AIRFIELD STATE</label><input type="text" id="bf_wx_airfield" placeholder="e.g. OPEN / CLOSED"/></div>
+        <div><label>DEP VISIBILITY</label><input type="text" id="bf_wx_depvis" placeholder="e.g. 5000M"/></div>
+        <div><label>DEST VISIBILITY</label><input type="text" id="bf_wx_destvis" placeholder="e.g. 8KM"/></div>
+        <div><label>CLOUD</label><input type="text" id="bf_wx_cloud" placeholder="e.g. FEW 2500ft"/></div>
+        <div><label>WIND</label><input type="text" id="bf_wx_wind" placeholder="e.g. 270/15KT"/></div>
+        <div><label>WEATHER WARNING</label><input type="text" id="bf_wx_warn" placeholder="e.g. THUNDERSTORM AREA"/></div>
+      </div>
+      <div style="margin-top:8px"><label>NOTAM</label><textarea id="bf_notam" rows="3" placeholder="Enter relevant NOTAMs..."></textarea></div>
+      <div style="margin-top:4px"><label>SPECIAL NOTE</label><textarea id="bf_special" rows="2" placeholder="Any special instructions..."></textarea></div>
+      <div class="btn-row" style="margin-top:14px;justify-content:space-between">
+        <button class="btn" onclick="bfGoStep(4)" style="padding:8px 20px">← BACK</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-amber" id="doPrintBriefBtn" style="padding:10px 18px;font-family:var(--font-display);font-size:11px;letter-spacing:1px;font-weight:700">📋 PRE-FLIGHT BRIEF</button>
+          <button class="btn btn-blue" id="doPilotCardBtn" style="padding:10px 18px;font-family:var(--font-display);font-size:11px;letter-spacing:1px;font-weight:700">✈️ PILOT CARD</button>
+          <button class="btn btn-red" id="closeBriefBtn2" style="padding:10px 14px">✖ CLOSE</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
   <!-- SAVE ROUTE NAME MODAL -->
@@ -2873,141 +3166,1227 @@ document.getElementById('importBtn').onclick=()=>{
     if(!areaId)return void alert('Please select an area to delete');deleteArea(areaId);
   };
 /* ================================================
-     PRINT FLIGHT BRIEF
+     PRINT FLIGHT BRIEF — FULL W&B / CG / FUEL ENGINE
   ================================================ */
+
+  /* ---- AW109E Constants ---- */
+  const AW109E = {
+    BASIC_WEIGHT: 2164.35,   // empty weight WITH fwd seat fitted
+    FWD_SEAT_WT: 18.00,      // subtract this when fwd seat is removed
+    MAX_AUW: 3030,
+    CREW_COUNT: 2,
+    CREW_WT: 75,
+    FUEL_CONS: 3.5,       // kg/min
+    STARTUP_FUEL: 30,     // kg burned during startup
+    SAFETY_FUEL: 100,     // kg minimum reserve on landing
+    MAX_FUEL: 550,        // kg max fuel capacity
+    EQUIP_ARM: 3542.261,  // mm arm for equipped empty weight items
+    PILOT_ARM: 1585,
+    COPILOT_ARM: 1585,
+    FUEL_ARM_TO: 3865,    // fuel arm at take-off
+    FUEL_ARM_LD: 3781,    // fuel arm at landing
+    BURN_ARM: 3724,       // burn-off arm
+    // CG envelope polygon [arm_mm, weight_kg] — from spreadsheet
+    ENVELOPE: [
+      [3220,2100],[3220,2600],[3245,2720],[3350,3000],
+      [3520,3000],[3550,2800],[3550,1850],[3458,1850],[3220,2100]
+    ],
+    // Equipment items: [id, label, weight_kg, affects_equip_arm]
+    EQUIP: [
+      ['wb_floats',   'Emergency Floats',    57.54, true ],
+      ['wb_nightsun', 'Night Sun',           20.62, false],
+      ['wb_winch',    'Winch',               46.00, false],
+      ['wb_cargohook','Cargo Hook',          10.70, false],
+      ['wb_praft',    'Pilot Life Raft',      3.75, true ],
+      ['wb_cpraft',   'Co-Pilot Life Raft',   3.75, false],
+      ['wb_pxraft',   'Passenger Life Raft', 20.00, false],
+      ['wb_lj1',      'Life Jacket ×1',       2.50, false],
+      ['wb_lj2',      'Life Jacket ×2',       2.50, false],
+      ['wb_lj3',      'Life Jacket ×3',       2.50, false],
+      ['wb_lj4',      'Life Jacket ×4',       2.50, false],
+      ['wb_lj5',      'Life Jacket ×5',       2.50, false],
+      ['wb_gun',      'Gun',                 12.00, false],
+      ['wb_pintle',   'Gun Pintle',          18.00, false],
+      ['wb_vipseat',  'VIP Seat',            16.00, false],
+      ['wb_fuelpump', 'Fuel Transfer Pump',  23.00, false],
+      ['wb_handpump', 'Hand Pump',            1.00, false],
+      ['wb_pumpbat',  'Pump Battery',        24.00, false],
+      ['wb_towbar',   'Tow Bar',             12.00, false],
+      ['wb_securing', 'Heli Securing Items',  8.00, false],
+    ]
+  };
+
+
+  /* ---- AW109SP Constants ---- */
+  const AW109SP = {
+    BASIC_WEIGHT: 2267.18,  // equipped empty weight (Chart C current value)
+    MAX_AUW: 3175,
+    MIN_WEIGHT: 2050,
+    CREW_COUNT: 2,
+    CREW_WT: 75,
+    FUEL_CONS: 3.5,         // kg/min
+    STARTUP_FUEL: 30,
+    SAFETY_FUEL: 100,
+    MAX_FUEL: 520,          // kg usable max
+    EQUIP_ARM: 3482,        // mm — from your W&B Calculator
+    PILOT_ARM: 1385,        // STA 1385 RHS — RFM p6-4
+    COPILOT_ARM: 1385,      // STA 1385 LHS — RFM p6-4
+    FWD_CABIN_ARM: 2200,    // STA 2200 — RFM p6-4/6-6
+    AFT_CABIN_ARM: 3400,    // STA 3400 — RFM p6-4/6-6
+    BAG_Z1_ARM: 4880,       // STA 4880 — RFM p6-9
+    BAG_Z2_ARM: 5240,       // STA 5240 — RFM p6-9
+    BAG_Z3_ARM: 5560,       // STA 5560 — RFM p6-9
+    BURN_ARM: 3810,         // burn-off arm — RFM table ~300kg row / xlsx
+    LAND_FUEL_ARM: 3732,    // landing fuel arm — RFM 100kg row / xlsx
+    // Fuel arm lookup table from RFM p6-7 usable fuel table
+    FUEL_ARM_TABLE: [
+      [20,3761],[40,3765],[60,3771],[80,3779],[100,3732],
+      [120,3663],[140,3613],[160,3578],[180,3561],[200,3599],
+      [220,3657],[240,3705],[260,3745],[280,3780],[300,3810],
+      [320,3837],[340,3860],[360,3881],[380,3899],[400,3916],
+      [420,3931],[440,3945],[449.6,3951]
+    ],
+    // CG envelope from xlsx Envelope Data sheet
+    ENVELOPE: [
+      [3225,2370],[3249,2910],[3330,3175],[3430,3175],
+      [3520,2970],[3520,2050],[3444,2050],[3225,2370]
+    ],
+    // Items INCLUDED in basic weight but REMOVABLE (subtract weight+moment when removed)
+    // [id, label, weight_kg, arm_mm]
+    REMOVABLE: [
+      ['sp_rm_cushion',  'Normal Seat Cushion (Pax)',   10.00,  2200],  // RFM fwd cabin STA
+      ['sp_rm_flir',     'FLIR Removable Parts',        25.21,  2500],  // xlsx
+      ['sp_rm_rearseat3','Rear Seat 3-Place',           33.515, 3400],  // RFM aft cabin STA
+      ['sp_rm_rearseat1','Rear Seat 1-Place',           11.17,  2200],  // RFM fwd cabin STA
+    ],
+    // ALWAYS carried (added on top of basic weight every flight)
+    // [id, label, weight_kg, arm_mm]
+    ALWAYS: [
+      ['sp_fwdseat', 'Pax Compartment Fwd Seat', 46.61, 2200],  // RFM fwd cabin STA
+    ],
+    // Optional mission equipment: [id, label, weight_kg, arm_mm, source]
+    EQUIP: [
+      ['sp_floats',    'Emergency Floats',          107.12, 3482, 'fuselage station'],
+      ['sp_nightsun',  'Night Sun',                  32.683, 2500, 'left fwd fuselage'],
+      ['sp_winch',     'Winch',                      64.99,  2500, 'xlsx'],
+      ['sp_cargohook', 'Cargo Hook (Under-Sling)',   12.70,  2600, 'xlsx'],
+      ['sp_flirconsole','FLIR Mission Console',      27.635, 2500, 'xlsx'],
+      ['sp_vipseat',   'VIP Seat Cushion',           25.00,  3400, 'aft cabin'],
+      ['sp_stretcher', 'Stretcher',                  26.13,  3400, 'left aft pax compartment'],
+      ['sp_oxygen',    'Oxygen Bottle',              25.00,  2500, 'mid-cabin'],
+      ['sp_gunpintle', 'Gun Pintle',                 23.20,  2500, 'xlsx'],
+      ['sp_gun',       'Gun',                        12.80,  2500, 'xlsx'],
+      ['sp_towbar',    'Tow Bar',                    12.00,  4475, 'RFM aft jack STA'],
+    ],
+    EXTRA_SLOTS: 3, // blank rows for additional items
+  };
+
+  // Fuel arm interpolation from RFM table
+  function spFuelArm(kg){
+    const tbl = AW109SP.FUEL_ARM_TABLE;
+    if(kg<=0) return tbl[0][1];
+    if(kg>=tbl[tbl.length-1][0]) return tbl[tbl.length-1][1];
+    for(let i=0;i<tbl.length-1;i++){
+      if(kg>=tbl[i][0]&&kg<=tbl[i+1][0]){
+        const t=(kg-tbl[i][0])/(tbl[i+1][0]-tbl[i][0]);
+        return Math.round(tbl[i][1]+(tbl[i+1][1]-tbl[i][1])*t);
+      }
+    }
+    return 3810;
+  }
+
+  let bfSelectedAc = '109E';
+  let bfCurrentStep = 1;
+  let bfFwdSeatFitted = true; // Fwd Seat is in basic weight by default
+  window._bfData = {}; // shared state across steps
+
+  window.bfToggleFwdSeat = function(){
+    bfFwdSeatFitted = !bfFwdSeatFitted;
+    const btn = document.getElementById('bfFwdSeatBtn');
+    const lbl = document.getElementById('bfBasicWtLabel');
+    const bw = bfFwdSeatFitted ? AW109E.BASIC_WEIGHT : AW109E.BASIC_WEIGHT - AW109E.FWD_SEAT_WT;
+    if(btn){
+      btn.style.background = bfFwdSeatFitted ? 'rgba(0,230,118,0.12)' : 'rgba(255,23,68,0.12)';
+      btn.style.borderColor = bfFwdSeatFitted ? 'rgba(0,230,118,0.5)' : 'rgba(255,23,68,0.5)';
+      btn.style.color = bfFwdSeatFitted ? 'var(--accent-green)' : 'var(--accent-red)';
+      btn.innerHTML = bfFwdSeatFitted
+        ? '✅ Fwd Seat FITTED &nbsp;<span style="color:var(--text-dim);font-size:10px">(18.00 kg included in basic weight — tap to remove)</span>'
+        : '❌ Fwd Seat REMOVED &nbsp;<span style="color:var(--text-dim);font-size:10px">(18.00 kg subtracted from basic weight — tap to restore)</span>';
+    }
+    if(lbl){ lbl.textContent = bw.toFixed(2) + ' kg'; lbl.nextElementSibling.textContent = bfFwdSeatFitted ? '(Fwd Seat fitted)' : '(Fwd Seat removed)'; }
+    bfWbUpdate();
+  };
+
+  /* ---- Helpers ---- */
+  function cgInEnvelope(arm, wt, poly){
+    poly = poly || AW109E.ENVELOPE;
+    const n = poly.length;
+    // Check if point lies on any boundary edge (boundary = inside)
+    for(let i=0;i<n-1;i++){
+      const x1=poly[i][0],y1=poly[i][1],x2=poly[i+1][0],y2=poly[i+1][1];
+      const cross=(arm-x1)*(y2-y1)-(wt-y1)*(x2-x1);
+      if(Math.abs(cross)<1e-4){
+        if(Math.min(x1,x2)-1e-4<=arm&&arm<=Math.max(x1,x2)+1e-4&&
+           Math.min(y1,y2)-1e-4<=wt &&wt <=Math.max(y1,y2)+1e-4) return true;
+      }
+    }
+    // Standard ray casting for interior
+    let inside=false,j=n-1;
+    for(let i=0;i<n;j=i++){
+      const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+      if(((yi>wt)!==(yj>wt))&&(arm<(xj-xi)*(wt-yi)/(yj-yi)+xi)) inside=!inside;
+    }
+    return inside;
+  }
+
+  function n(id){ return parseFloat(document.getElementById(id)?.value)||0; }
+  function chk(id){ return document.getElementById(id)?.checked||false; }
+  function gv(id){ return document.getElementById(id)?.value||'—'; }
+  function fmt1(v){ return (+v).toFixed(1); }
+  function fmt0(v){ return Math.round(+v).toString(); }
+
+  /* ---- Step navigation ---- */
+  window.bfGoStep = function(step){
+    [1,2,3,4,5].forEach(s=>{
+      document.getElementById('bfStep'+s).style.display = s===step?'':'none';
+      const ind = document.getElementById('stepInd'+s);
+      if(ind){
+        ind.style.background = s===step?'rgba(255,171,0,0.25)':'transparent';
+        ind.style.color = s===step?'var(--accent-amber)':'var(--text-dim)';
+      }
+    });
+    bfCurrentStep = step;
+    if(step===3) bfBuildRoute();
+    if(step===4){
+      const _ac = bfSelectedAc==='109SP' ? AW109SP : AW109E;
+      const ft = window._bfData.fuelTaken || window._bfData.fuelRequired || 0;
+      // cg_fuel_to = fuel AT take-off = fuelTaken minus startup burned before lift-off
+      const ftTO = ft > 0 ? Math.max(0, Math.round(ft - _ac.STARTUP_FUEL)) : '';
+      document.getElementById('cg_fuel_to').value = ftTO;
+      const bag2 = window._bfData.baggage||0;
+      if(bag2>0&&!n('cg_bag')) document.getElementById('cg_bag').value=bag2;
+      bfCgCalc();
+    } // arm label updated inside bfCgCalc
+  };
+
+  /* ---- Aircraft selector ---- */
+  window.bfSelectAc = function(ac){
+    bfSelectedAc = ac;
+    const isSP = ac==='109SP';
+    ['109E','109SP'].forEach(a=>{
+      const btn = document.getElementById('bfAcBtn_'+a);
+      btn.style.border = a===ac?'2px solid var(--accent-amber)':'2px solid var(--border-dim)';
+      btn.style.background = a===ac?'rgba(255,171,0,0.18)':'transparent';
+      btn.style.opacity = '1';
+    });
+    document.getElementById('bfAcLabel').textContent = isSP?'AW109SP':'AW109E';
+    // Update basic weight display
+    const bw = isSP ? AW109SP.BASIC_WEIGHT : (bfFwdSeatFitted ? AW109E.BASIC_WEIGHT : AW109E.BASIC_WEIGHT - AW109E.FWD_SEAT_WT);
+    document.getElementById('bfBasicWtLabel').textContent = bw.toFixed(2)+' kg';
+    document.getElementById('bfBasicWtNote').textContent = isSP?'(see removable items below)':'(Fwd Seat fitted)';
+    document.getElementById('bfMaxAuwLabel').textContent = (isSP?AW109SP.MAX_AUW:AW109E.MAX_AUW)+' kg';
+    // Show/hide AW109E vs SP sections in Step 2
+    document.getElementById('bfFwdSeatDiv').style.display = isSP?'none':'';
+    document.getElementById('bfEEquipDiv').style.display = isSP?'none':'';
+    document.getElementById('bfSpRemovableDiv').style.display = isSP?'':'none';
+    document.getElementById('bfSpEquipDiv').style.display = isSP?'':'none';
+    // Update Step 4 labels
+    document.getElementById('bfCgAcLabel').textContent = isSP?'AW109SP':'AW109E';
+    const pArm = isSP?AW109SP.PILOT_ARM:AW109E.PILOT_ARM;
+    const cpArm = isSP?AW109SP.COPILOT_ARM:AW109E.COPILOT_ARM;
+    const fwdArm = isSP?AW109SP.FWD_CABIN_ARM:2455;
+    const aftArm = isSP?AW109SP.AFT_CABIN_ARM:3200;
+    const bagArm = isSP?AW109SP.BAG_Z1_ARM:5696;
+    document.getElementById('cg_pilot_lbl').textContent   = `PILOT (arm ${pArm} mm)`;
+    document.getElementById('cg_copilot_lbl').textContent = `CO-PILOT (arm ${cpArm} mm)`;
+    document.getElementById('cg_fwdl_lbl').textContent = `FWD-LEFT (arm ${fwdArm} mm)`;
+    document.getElementById('cg_fwdc_lbl').textContent = `FWD-CENTRE (arm ${fwdArm} mm)`;
+    document.getElementById('cg_fwdr_lbl').textContent = `FWD-RIGHT (arm ${fwdArm} mm)`;
+    document.getElementById('cg_aftl_lbl').textContent = `AFT-LEFT (arm ${aftArm} mm)`;
+    document.getElementById('cg_aftc_lbl').textContent = `AFT-CENTRE (arm ${aftArm} mm)`;
+    document.getElementById('cg_aftr_lbl').textContent = `AFT-RIGHT (arm ${aftArm} mm)`;
+    document.getElementById('cg_bag_lbl').textContent  = `BAGGAGE (arm ${bagArm} mm)`;
+    // Fuel max cap on input
+    const fuelEl = document.getElementById('bf_fuel_taken');
+    const heloEl = document.getElementById('bf_fuel_in_helo');
+    if(fuelEl) fuelEl.max = isSP?AW109SP.MAX_FUEL:AW109E.MAX_FUEL;
+    if(heloEl) heloEl.max = isSP?AW109SP.MAX_FUEL:AW109E.MAX_FUEL;
+    // Pax max: SP has 8 seats total, 2 crew = 6 pax max; E has 4 pax max
+    const paxEl = document.getElementById('wb_pax');
+    if(paxEl) paxEl.max = isSP ? 6 : 4;
+    bfWbUpdate();
+  };
+
+  /* ---- STEP 2: Equipment / Weight ---- */
+  window.bfWbUpdate = function(){
+    const isSP = bfSelectedAc === '109SP';
+
+    if(isSP){
+      // ── AW109SP ─────────────────────────────────────────────────────
+      const ac = AW109SP;
+      let effectiveBasic = ac.BASIC_WEIGHT;
+      let basicMoment = ac.BASIC_WEIGHT * ac.EQUIP_ARM;
+      const carriedItems = [];
+
+      // Removable items from basic weight
+      ac.REMOVABLE.forEach(([id,label,wt,arm])=>{
+        if(!chk(id)){
+          effectiveBasic -= wt;
+          basicMoment -= wt*arm;
+          carriedItems.push({label:'⊖ '+label+' (removed)', wt:-wt, arm});
+        }
+      });
+
+      // Forward seat — always carried by default, but pilot can untick
+      let alwaysWt=0, alwaysMom=0;
+      ac.ALWAYS.forEach(([id,label,wt,arm])=>{
+        const chkId = id+'_chk'; // sp_fwdseat_chk
+        const fitted = document.getElementById(chkId)?.checked !== false; // default true if missing
+        if(fitted){
+          alwaysWt += wt; alwaysMom += wt*arm;
+          carriedItems.push({label, wt, arm});
+        } else {
+          carriedItems.push({label:'⊖ '+label+' (removed)', wt:-0, arm, removed:true});
+        }
+      });
+
+      // Optional mission equipment
+      let equipWt=0, equipMom=0;
+      ac.EQUIP.forEach(([id,label,wt,arm])=>{
+        if(chk(id)){
+          equipWt+=wt; equipMom+=wt*arm;
+          carriedItems.push({label,wt,arm});
+        }
+      });
+
+      // Life jackets
+      const ljCount = parseInt(document.getElementById('sp_lj_count')?.value)||0;
+      if(ljCount>0){
+        const ljWt=ljCount*2.5, ljArm=2500;
+        equipWt+=ljWt; equipMom+=ljWt*ljArm;
+        carriedItems.push({label:`Life Jackets ×${ljCount}`,wt:ljWt,arm:ljArm});
+      }
+
+      // Extra blank items
+      for(let i=1;i<=3;i++){
+        const nm=(document.getElementById(`sp_ex${i}_name`)?.value||'').trim();
+        const wt=parseFloat(document.getElementById(`sp_ex${i}_wt`)?.value)||0;
+        const arm=parseFloat(document.getElementById(`sp_ex${i}_arm`)?.value)||0;
+        if(nm&&wt>0&&arm>0){ equipWt+=wt; equipMom+=wt*arm; carriedItems.push({label:nm,wt,arm}); }
+      }
+
+      const pax = n('wb_pax'), baggage = n('wb_baggage'), support = n('wb_support');
+      const crewWt = ac.CREW_COUNT*ac.CREW_WT;
+
+      const zfw = effectiveBasic + alwaysWt + equipWt + crewWt + pax*75 + baggage + support;
+      const zfwMoment = basicMoment + alwaysMom + equipMom
+                      + crewWt*ac.PILOT_ARM   // crew arm approx pilot arm for summary
+                      + pax*75*ac.FWD_CABIN_ARM   // pax summary (detail in step 4)
+                      + baggage*ac.BAG_Z1_ARM
+                      + support*ac.EQUIP_ARM;
+      const fuelAllowed = Math.max(0, Math.min(ac.MAX_FUEL, ac.MAX_AUW - zfw));
+
+      window._bfData = { ...window._bfData,
+        isSP:true, equipWt, equipMom, alwaysWt, alwaysMom,
+        effectiveBasic, basicMoment, basicArm:ac.EQUIP_ARM,
+        equipArmWt: effectiveBasic + alwaysWt,
+        carriedItems, pax, baggage, support, zfw, zfwMoment, fuelAllowed
+      };
+
+      const el = document.getElementById('bfWbSummary');
+      if(!el) return;
+      const removedWt = ac.BASIC_WEIGHT - effectiveBasic;
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px">
+          <div style="background:rgba(0,170,255,0.08);border-radius:4px;padding:6px 8px">
+            <div style="font-size:9px;color:var(--text-dim)">EFF. BASIC</div>
+            <div style="color:var(--accent-cyan);font-weight:700">${(effectiveBasic+alwaysWt).toFixed(2)} kg</div>
+            ${removedWt>0?`<div style="font-size:9px;color:var(--accent-red)">−${removedWt.toFixed(2)} removed</div>`:''}
+          </div>
+          <div style="background:rgba(0,170,255,0.08);border-radius:4px;padding:6px 8px">
+            <div style="font-size:9px;color:var(--text-dim)">ZFW</div>
+            <div style="color:var(--accent-amber);font-weight:700">${zfw.toFixed(1)} kg</div>
+          </div>
+          <div style="background:rgba(0,230,118,0.08);border-radius:4px;padding:6px 8px">
+            <div style="font-size:9px;color:var(--text-dim)">FUEL ALLOWED</div>
+            <div style="color:var(--accent-green);font-weight:700">${fuelAllowed.toFixed(0)} kg</div>
+          </div>
+        </div>
+        <div style="margin-top:5px;font-size:10px;color:var(--text-secondary)">
+          Max AUW: <b style="color:var(--accent-amber)">3175 kg</b> &nbsp;|&nbsp;
+          Weight headroom: <b style="color:var(--accent-cyan)">${fuelAllowed.toFixed(0)} kg</b> available for fuel
+        </div>`;
+      return;
+    }
+
+    // ── AW109E ────────────────────────────────────────────────────────
+    const ac = AW109E;
+    // 2164.35 = empty weight WITH fwd seat; remove fwd seat → 2146.35
+    const effectiveBasic = bfFwdSeatFitted ? ac.BASIC_WEIGHT : ac.BASIC_WEIGHT - ac.FWD_SEAT_WT;
+    // equipArmWt for CG: base = effectiveBasic
+    let equipWt = 0, equipArmWt = effectiveBasic;
+    const carriedItems = [];
+    if(!bfFwdSeatFitted) carriedItems.push({label:'⚠ Fwd Seat REMOVED', wt:0, removed:true});
+    ac.EQUIP.forEach(([id,label,wt,affectsArm])=>{
+      if(chk(id)){
+        equipWt += wt;
+        carriedItems.push({label,wt});
+      }
+    });
+    const pax = n('wb_pax'), baggage = n('wb_baggage'), support = n('wb_support');
+    const zfw = effectiveBasic + ac.CREW_COUNT*ac.CREW_WT + equipWt + pax*75 + baggage + support;
+    const fuelAllowed = Math.max(0, Math.min(ac.MAX_FUEL, ac.MAX_AUW - zfw));
+    const maxPaxWithMaxFuel = Math.max(0, Math.floor((fuelAllowed - 0) / 75));
+
+    window._bfData = { ...window._bfData,
+      isSP:false, equipWt, equipArmWt, carriedItems, pax, baggage, support,
+      zfw, fuelAllowed, maxPaxWithMaxFuel
+    };
+
+    const el = document.getElementById('bfWbSummary');
+    if(!el) return;
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px">
+        <div style="background:rgba(0,170,255,0.08);border-radius:4px;padding:6px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">EQUIP WT</div>
+          <div style="color:var(--accent-cyan);font-weight:700">${fmt1(equipWt)} kg</div>
+        </div>
+        <div style="background:rgba(0,170,255,0.08);border-radius:4px;padding:6px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">ZFW</div>
+          <div style="color:var(--accent-amber);font-weight:700">${fmt1(zfw)} kg</div>
+        </div>
+        <div style="background:rgba(0,230,118,0.08);border-radius:4px;padding:6px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">FUEL ALLOWED</div>
+          <div style="color:var(--accent-green);font-weight:700">${fmt0(fuelAllowed)} kg</div>
+        </div>
+      </div>
+      <div style="margin-top:5px;font-size:10px;color:var(--text-secondary)">
+        Max AUW: <b style="color:var(--accent-amber)">3030 kg</b> &nbsp;|&nbsp; Weight headroom: <b style="color:var(--accent-cyan)">${fmt0(fuelAllowed)} kg</b> available for fuel+pax
+      </div>`;
+  };
+
+  /* ---- STEP 3: Route & Fuel ---- */
+  window.bfBuildRoute = function(){
+    const ac = bfSelectedAc==='109SP' ? AW109SP : AW109E;
+    const spd = n('bf_cruise_kts');
+    const isReturn = document.getElementById('bf_flight_type').value === 'return';
+    const routeDiv = document.getElementById('bfRouteDisplay');
+    const holdSection = document.getElementById('bfHoldSection');
+    const holdInputs = document.getElementById('bfHoldInputs');
+
+    if(!selected || selected.length < 2){
+      routeDiv.innerHTML = '<div style="color:var(--accent-red);text-align:center;padding:12px">⚠ No route selected on map.<br><span style="font-size:10px;color:var(--text-dim)">Close this dialog, select waypoints on the map, then return.</span></div>';
+      holdSection.style.display = 'none';
+      document.getElementById('bfFuelResult').innerHTML = '<span style="color:var(--text-dim)">Select a route first.</span>';
+      return;
+    }
+
+    // Build route legs
+    let routeHTML = '<table style="width:100%;border-collapse:collapse;font-size:10px">';
+    routeHTML += '<tr style="color:var(--text-dim);font-size:9px"><td>LEG</td><td>FROM→TO</td><td style="text-align:right">NM</td><td style="text-align:right">BRG</td><td style="text-align:right">MIN</td></tr>';
+    let totalDist = 0, totalTime = 0;
+    const legs = [];
+    for(let i=0;i<selected.length-1;i++){
+      const a=waypoints.find(w=>w.id===selected[i]);
+      const b=waypoints.find(w=>w.id===selected[i+1]);
+      if(!a||!b) continue;
+      const dist = haversineNM(a.lat,a.lon,b.lat,b.lon);
+      const brg = bearing(a.lat,a.lon,b.lat,b.lon);
+      let legDist = isReturn ? dist*2 : dist;
+      const wpCount = 1; // 2 min per intermediate waypoint
+      const holdMin2 = (i > 0) ? 2 : 0; // +2 min overhead for each intermediate waypoint overflown
+      const legMin = spd>0 ? (legDist/spd*60) + holdMin2 : 0;
+      totalDist += legDist; totalTime += legMin;
+      legs.push({from:a.name,to:b.name,dist:legDist,brg,min:legMin,holdMin2,aLat:a.lat,aLon:a.lon,bLat:b.lat,bLon:b.lon,origDist:dist});
+      routeHTML += `<tr style="border-top:1px solid var(--border-dim)">
+        <td style="color:var(--text-dim)">${i+1}</td>
+        <td style="color:var(--text-primary)">${a.name} → ${b.name}</td>
+        <td style="text-align:right;color:var(--accent-cyan)">${legDist.toFixed(1)}</td>
+        <td style="text-align:right;color:var(--text-secondary)">${brg.toFixed(0)}°</td>
+        <td style="text-align:right;color:var(--accent-amber)">${legMin.toFixed(0)}</td>
+      </tr>`;
+    }
+    routeHTML += `<tr style="border-top:2px solid var(--border-glow);font-weight:700">
+      <td colspan="2" style="color:var(--accent-amber)">TOTAL ${isReturn?'(RETURN)':'(ONE WAY)'}</td>
+      <td style="text-align:right;color:var(--accent-cyan)">${totalDist.toFixed(1)} NM</td>
+      <td></td><td style="text-align:right;color:var(--accent-amber)">${totalTime.toFixed(0)} min</td>
+    </tr></table>`;
+    routeDiv.innerHTML = routeHTML;
+
+    // Hold inputs per intermediate waypoint
+    const intermediates = selected.slice(1,-1);
+    if(intermediates.length > 0){
+      holdSection.style.display = '';
+      holdInputs.innerHTML = '';
+      intermediates.forEach(id=>{
+        const wp = waypoints.find(w=>w.id===id);
+        if(!wp) return;
+        const d = document.createElement('div');
+        d.innerHTML = `<label style="font-size:9px;color:var(--text-secondary)">${wp.name}</label>
+          <input type="number" id="hold_${id}" min="0" value="0" oninput="bfFuelCalc()" style="width:100%;margin-top:2px"/>`;
+        holdInputs.appendChild(d);
+      });
+    } else {
+      holdSection.style.display = 'none';
+    }
+
+    window._bfData = {...window._bfData, legs, totalDist, totalTime, isReturn};
+    bfFuelCalc();
+  };
+
+  window.bfFuelCalc = function(){
+    if(!window._bfData.legs) { bfBuildRoute(); return; }
+    const ac = bfSelectedAc==='109SP' ? AW109SP : AW109E;
+    const spd = n('bf_cruise_kts');
+    const isReturn = document.getElementById('bf_flight_type').value === 'return';
+
+    // Recalc total time with holds
+    let totalTime = 0;
+    let totalDist = 0;
+    window._bfData.legs.forEach((leg,i)=>{
+      let legDist = isReturn ? leg.origDist*2 : leg.origDist;
+      const holdMin2 = (i > 0) ? 2 : 0;
+      const legMin = spd>0 ? (legDist/spd*60) + holdMin2 : 0;
+      totalTime += legMin;
+      totalDist += legDist;
+    });
+    // Add holding time
+    const intermediates = selected.slice(1,-1);
+    let totalHold = 0;
+    intermediates.forEach(id=>{
+      const el = document.getElementById('hold_'+id);
+      totalHold += parseFloat(el?.value)||0;
+    });
+    totalTime += totalHold;
+
+    const fuelRequired = Math.round(ac.STARTUP_FUEL + totalTime*ac.FUEL_CONS + ac.SAFETY_FUEL);
+    const enduranceMaxFuel = Math.max(0,(ac.MAX_FUEL - ac.STARTUP_FUEL - ac.SAFETY_FUEL)/ac.FUEL_CONS);
+    const zfw = window._bfData.zfw || (ac.BASIC_WEIGHT + ac.CREW_COUNT*ac.CREW_WT);
+    const fuelAllowed = Math.max(0, Math.min(ac.MAX_FUEL, ac.MAX_AUW - zfw));
+    const effectiveFuelMax = fuelAllowed;
+    const fuelStatus = effectiveFuelMax >= fuelRequired ? 'SUFFICIENT' : 'INSUFFICIENT';
+    const statusColor = fuelStatus==='SUFFICIENT'?'var(--accent-green)':'var(--accent-red)';
+
+    // Pax capacity
+    const paxCapFuelReq = Math.max(0, Math.floor((fuelAllowed - fuelRequired)/75));
+    const fuelTaken = n('bf_fuel_taken');
+    const paxCapFuelTaken = fuelTaken>0 ? Math.max(0, Math.floor((fuelAllowed - fuelTaken)/75)) : '—';
+    const endurance = fuelTaken>0 ? Math.max(0,(fuelTaken - ac.STARTUP_FUEL - ac.SAFETY_FUEL)/ac.FUEL_CONS) : 0;
+    const endH = Math.floor(endurance/60), endM = Math.round(endurance%60);
+
+    // Refuelling for MEDEVAC
+    const fuelInHelo = n('bf_fuel_in_helo');
+    const refuelNeeded = fuelTaken>0 ? Math.max(0, fuelTaken - fuelInHelo) : 0;
+    const refuelLtr = +(refuelNeeded/0.8).toFixed(1);
+    const refuelLb = +(refuelNeeded*2.20462).toFixed(1);
+
+    window._bfData = {...window._bfData, totalTime, totalDist, fuelRequired, fuelStatus,
+      fuelTaken, fuelInHelo, fuelAllowed, endurance, endH, endM, paxCapFuelReq, paxCapFuelTaken,
+      refuelNeeded, refuelLtr, refuelLb, spd, isReturn, totalHold };
+
+    const resultEl = document.getElementById('bfFuelResult');
+    if(resultEl) resultEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:6px">
+        <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:6px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">FLIGHT TIME</div>
+          <div style="color:var(--accent-cyan);font-weight:700">${totalTime.toFixed(0)} min</div>
+          <div style="font-size:9px;color:var(--text-dim)">incl. ${totalHold} min hold</div>
+        </div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:6px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">FUEL REQUIRED</div>
+          <div style="color:var(--accent-amber);font-weight:700">${fuelRequired} kg</div>
+          <div style="font-size:9px;color:var(--text-dim)">incl. ${ac.STARTUP_FUEL}+${ac.SAFETY_FUEL} kg</div>
+        </div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:6px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">FUEL ALLOWED</div>
+          <div style="color:var(--accent-green);font-weight:700">${fmt0(fuelAllowed)} kg</div>
+          <div style="font-size:9px;color:${statusColor};font-weight:700">${fuelStatus}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text-secondary)">
+        ZFW: <b style="color:var(--accent-cyan)">${fmt1(zfw)} kg</b> &nbsp;|&nbsp;
+        PAX capacity (fuel req'd): <b style="color:var(--accent-amber)">${paxCapFuelReq}</b> &nbsp;|&nbsp;
+        Startup: <b>${ac.STARTUP_FUEL} kg</b> &nbsp;|&nbsp; Safety: <b>${ac.SAFETY_FUEL} kg</b>
+      </div>`;
+
+    const statusEl = document.getElementById('bfFuelStatus');
+    if(statusEl && fuelTaken>0) statusEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px">
+        <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:6px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">TOW</div>
+          <div style="font-size:8px;color:var(--text-dim)">Ramp: ${fmt1(zfw+fuelTaken)} kg</div>
+          <div style="color:var(--accent-amber);font-weight:700">T/O: ${fmt1(zfw+fuelTaken-ac.STARTUP_FUEL)} kg</div>
+          <div style="font-size:9px;color:${(zfw+fuelTaken-ac.STARTUP_FUEL)>ac.MAX_AUW?'var(--accent-red)':'var(--accent-green)'}">${(zfw+fuelTaken-ac.STARTUP_FUEL)>ac.MAX_AUW?'⚠ OVERWEIGHT':'OK'}</div>
+        </div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:6px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">ENDURANCE</div>
+          <div style="color:var(--accent-green);font-weight:700">${endH}h ${String(endM).padStart(2,'0')}min</div>
+        </div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:6px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">FUEL STATUS</div>
+          <div style="color:${fuelTaken>=fuelRequired?'var(--accent-green)':'var(--accent-red)'};font-weight:700">${fuelTaken>=fuelRequired?'✓ GO':'✗ NO GO'}</div>
+        </div>
+      </div>
+      <div style="margin-top:5px;font-size:10px;color:var(--text-secondary)">
+        PAX capacity (fuel taken): <b style="color:var(--accent-cyan)">${paxCapFuelTaken}</b> &nbsp;|&nbsp;
+        To refuel: <b style="color:var(--accent-amber)">${refuelNeeded>0?refuelNeeded+' kg / '+refuelLtr+' ltr':'NIL'}</b>
+      </div>`;
+    else if(statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);font-size:11px">Enter fuel taken above to see status...</span>';
+  };
+
+  /* ---- STEP 4: CG Calculation ---- */
+  window.bfCgCalc = function(){
+    const isSP = bfSelectedAc==='109SP';
+    const ac = isSP ? AW109SP : AW109E;
+    const PILOT_ARM   = isSP ? ac.PILOT_ARM   : AW109E.PILOT_ARM;
+    const COPILOT_ARM = isSP ? ac.COPILOT_ARM : AW109E.COPILOT_ARM;
+    const FWD_ARM     = isSP ? ac.FWD_CABIN_ARM : 2455;
+    const AFT_ARM     = isSP ? ac.AFT_CABIN_ARM : 3200;
+    const BAG_ARM     = isSP ? ac.BAG_Z1_ARM    : 5696;
+    const BURN_ARM    = isSP ? ac.BURN_ARM : AW109E.BURN_ARM;
+    const LAND_ARM    = isSP ? ac.LAND_FUEL_ARM : AW109E.FUEL_ARM_LD;
+    const pilot = n('cg_pilot'), copilot = n('cg_copilot');
+    const fwdL=n('cg_fwdl'), fwdC=n('cg_fwdc'), fwdR=n('cg_fwdr');
+    const aftL=n('cg_aftl'), aftC=n('cg_aftc'), aftR=n('cg_aftr');
+    const bag=n('cg_bag'), fuelTO=n('cg_fuel_to');
+    const FUEL_ARM_TO = isSP ? spFuelArm(fuelTO) : AW109E.FUEL_ARM_TO;
+    const fuelLbl = document.getElementById('cg_fuel_lbl');
+    if(fuelLbl) fuelLbl.textContent = isSP ? `FUEL AT T/O = taken−30kg (arm ${FUEL_ARM_TO} mm — RFM table)` : `FUEL AT T/O = taken−30kg (arm ${AW109E.FUEL_ARM_TO} mm)`;
+
+    // CG: for SP — basic empty weight only + fwd seat if ticked. Nothing else.
+    // For AW109E — equipped empty weight (basic in basic weight).
+    let cgBasicWt, cgBasicMom;
+    if(isSP){
+      // Basic empty: 2267.18 kg at STA 3482
+      cgBasicWt = ac.BASIC_WEIGHT;
+      cgBasicMom = ac.BASIC_WEIGHT * ac.EQUIP_ARM;
+      // Forward seat: add only if checkbox ticked
+      const fwdSeatEl = document.getElementById('sp_fwdseat_chk');
+      if(fwdSeatEl && fwdSeatEl.checked){
+        cgBasicWt += AW109SP.ALWAYS[0][2];        // 46.61 kg
+        cgBasicMom += AW109SP.ALWAYS[0][2] * AW109SP.ALWAYS[0][3]; // × STA 2200
+      }
+    } else {
+      // AW109E: use equipArmWt from Step 2 (basic ± fwd seat toggle)
+      cgBasicWt = window._bfData.equipArmWt || ac.BASIC_WEIGHT;
+      cgBasicMom = cgBasicWt * ac.EQUIP_ARM;
+    }
+    const equipArmWt = cgBasicWt; // used for table display and ZFW sum
+    const mEquip = cgBasicMom;
+    const mPilot   = pilot * PILOT_ARM;
+    const mCopilot = copilot * COPILOT_ARM;
+    const mFwdL=fwdL*FWD_ARM, mFwdC=fwdC*FWD_ARM, mFwdR=fwdR*FWD_ARM;
+    const mAftL=aftL*AFT_ARM, mAftC=aftC*AFT_ARM, mAftR=aftR*AFT_ARM;
+    const mBag=bag*BAG_ARM;
+    const mFuelTO = fuelTO * FUEL_ARM_TO;  // full fuel taken sits in tank at T/O
+
+    const zfwWt = equipArmWt + pilot + copilot + fwdL+fwdC+fwdR + aftL+aftC+aftR + bag;
+    const zfwMom = mEquip + mPilot + mCopilot + mFwdL+mFwdC+mFwdR + mAftL+mAftC+mAftR + mBag;
+    const zfwArm = zfwWt>0 ? zfwMom/zfwWt : 0;
+
+    const towWt = zfwWt + fuelTO;
+    const towMom = zfwMom + mFuelTO;
+    const towArm = towWt>0 ? towMom/towWt : 0;
+
+    // Burn off — use flight time from fuel calc
+    const d = window._bfData;
+    const burnOff = Math.min(fuelTO, ac.STARTUP_FUEL + (d.totalTime||0)*ac.FUEL_CONS);
+    const mBurn = burnOff * BURN_ARM;
+    const ldwWt = towWt - burnOff;
+    const ldwMom = towMom - mBurn;
+    const ldwArm = ldwWt>0 ? ldwMom/ldwWt : 0;
+
+    const toOK = cgInEnvelope(towArm, towWt, ac.ENVELOPE);
+    const ldOK = cgInEnvelope(ldwArm, ldwWt, ac.ENVELOPE);
+    const overweight = towWt > ac.MAX_AUW;
+    const fuelOK = (d.fuelTaken > 0) && (d.fuelTaken >= d.fuelRequired);
+    // CG step verdict: weight + envelope only (fuel status shown separately in Step 3)
+    const verdict = (!overweight && toOK && ldOK) ? 'GO' : 'NO GO';
+    // Full verdict (including fuel) used in print brief
+    const fullVerdict = (!overweight && toOK && ldOK && fuelOK) ? 'GO' : 'NO GO';
+    // Pax consistency check
+    const cgPaxTotal = fwdL+fwdC+fwdR+aftL+aftC+aftR;
+    const step2PaxTotal = (d.pax||0)*75;
+    const paxMismatch = step2PaxTotal > 0 && Math.abs(cgPaxTotal - step2PaxTotal) > 1;
+    const verdictColor = verdict==='GO'?'var(--accent-green)':'var(--accent-red)';
+
+    window._bfData = {...window._bfData,
+      cg:{pilot,copilot,fwdL,fwdC,fwdR,aftL,aftC,aftR,bag,fuelTO,
+          equipArmWt,
+          zfwWt,zfwArm,towWt,towArm,ldwWt,ldwArm,burnOff,toOK,ldOK,overweight,
+          verdict, fullVerdict,
+          cgPaxTotal,step2PaxTotal,paxMismatch}
+    };
+
+    const el = document.getElementById('bfCgResult');
+    if(!el) return;
+    const cgRow=(lbl,wt,arm,mom,hi)=>`<tr${hi?' style="background:rgba(255,171,0,0.08)"':''}>
+      <td style="text-align:left;padding:3px 6px">${lbl}</td>
+      <td style="text-align:right;padding:3px 6px">${fmt1(wt)}</td>
+      <td style="text-align:right;padding:3px 6px">${Math.round(arm)}</td>
+      <td style="text-align:right;padding:3px 6px">${Math.round(mom)}</td></tr>`;
+
+    el.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:8px">
+        <thead><tr style="background:rgba(0,0,0,0.4)">
+          <th style="text-align:left;padding:3px 6px">Station</th>
+          <th style="text-align:right;padding:3px 6px">Wt (kg)</th>
+          <th style="text-align:right;padding:3px 6px">Arm (mm)</th>
+          <th style="text-align:right;padding:3px 6px">Moment</th>
+        </tr></thead><tbody>
+        ${(()=>{
+          if(!isSP) return cgRow('Equipped Empty',equipArmWt,ac.EQUIP_ARM,mEquip);
+          const _fwdEl=document.getElementById('sp_fwdseat_chk');
+          const _fwdOn=_fwdEl&&_fwdEl.checked;
+          const _fwdWt=AW109SP.ALWAYS[0][2], _fwdArm=AW109SP.ALWAYS[0][3];
+          let r=cgRow('Basic Empty Weight',ac.BASIC_WEIGHT,ac.EQUIP_ARM,ac.BASIC_WEIGHT*ac.EQUIP_ARM);
+          if(_fwdOn) r+=cgRow('Fwd Seat (Pax Compt)',_fwdWt,_fwdArm,_fwdWt*_fwdArm);
+          return r;
+        })()}
+        ${cgRow('Pilot',pilot,PILOT_ARM,mPilot)}
+        ${cgRow('Co-Pilot/PAX',copilot,COPILOT_ARM,mCopilot)}
+        ${fwdL>0?cgRow('Fwd-L PAX',fwdL,FWD_ARM,mFwdL):''}
+        ${fwdC>0?cgRow('Fwd-C PAX',fwdC,FWD_ARM,mFwdC):''}
+        ${fwdR>0?cgRow('Fwd-R PAX',fwdR,FWD_ARM,mFwdR):''}
+        ${aftL>0?cgRow('Aft-L PAX',aftL,AFT_ARM,mAftL):''}
+        ${aftC>0?cgRow('Aft-C PAX',aftC,AFT_ARM,mAftC):''}
+        ${aftR>0?cgRow('Aft-R PAX',aftR,AFT_ARM,mAftR):''}
+        ${bag>0?cgRow('Baggage',bag,BAG_ARM,mBag):''}
+        ${cgRow('ZFW',zfwWt,zfwArm,zfwMom,true)}
+        ${cgRow('Take-Off Fuel',fuelTO,FUEL_ARM_TO,mFuelTO)}
+        ${cgRow('TOW',towWt,towArm,towMom,true)}
+        ${cgRow('Burn-Off',burnOff,BURN_ARM,mBurn)}
+        ${cgRow('LDW',ldwWt,ldwArm,ldwMom,true)}
+        </tbody>
+      </table>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:6px">
+        <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:5px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">TO CG ARM</div>
+          <div style="font-weight:700;color:${toOK?'var(--accent-green)':'var(--accent-red)'}">${towArm.toFixed(0)} mm</div>
+          <div style="font-size:9px;color:${toOK?'var(--accent-green)':'var(--accent-red)'}">${toOK?'✓ IN ENV':'✗ OUT'}</div>
+        </div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:5px 8px">
+          <div style="font-size:9px;color:var(--text-dim)">LD CG ARM</div>
+          <div style="font-weight:700;color:${ldOK?'var(--accent-green)':'var(--accent-red)'}">${ldwArm.toFixed(0)} mm</div>
+          <div style="font-size:9px;color:${ldOK?'var(--accent-green)':'var(--accent-red)'}">${ldOK?'✓ IN ENV':'✗ OUT'}</div>
+        </div>
+        <div style="border:2px solid ${verdictColor};border-radius:4px;padding:5px 8px;display:flex;align-items:center;justify-content:center">
+          <div style="font-family:var(--font-display);font-size:16px;font-weight:900;color:${verdictColor};letter-spacing:3px">${verdict}</div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:var(--text-dim)">
+        ${overweight?'⚠ OVERWEIGHT |':''} CG Envelope: TO ${toOK?'OK':'OUTSIDE'} | LD ${ldOK?'OK':'OUTSIDE'}
+        ${paxMismatch?`<br><span style="color:var(--accent-red);font-weight:700">⚠ PAX weight mismatch: Step 2 = ${step2PaxTotal} kg, CG seats = ${cgPaxTotal} kg</span>`:''}
+        ${!fuelOK?`<br><span style="color:var(--accent-amber)">Fuel: ${d.fuelTaken>0?(d.fuelTaken>=d.fuelRequired?'✓ Sufficient':'✗ Insufficient — see Step 3'):'not entered — see Step 3'}</span>`:''}
+      </div>`;
+  };
+
+  /* ---- Sidebar Fuel Calc ---- */
+  window.fcSelectAc = function(ac){
+    ['109E','109SP'].forEach(a=>{
+      const btn=document.getElementById('fcAcBtn_'+a);
+      if(!btn)return;
+      btn.style.border = a===ac?'1px solid var(--accent-amber)':'1px solid var(--border-dim)';
+      btn.style.background = a===ac?'rgba(255,171,0,0.18)':'transparent';
+      btn.style.color = a===ac?'var(--accent-amber)':'var(--text-dim)';
+    });
+    document.getElementById('fcPanel_109E').style.display = ac==='109E'?'':'none';
+    document.getElementById('fcPanel_109SP').style.display = ac==='109SP'?'':'none';
+  };
+  window.fcCalcSP = function(){
+    const inHelo = parseFloat(document.getElementById('fc_fuel_in_helo_sp')?.value)||0;
+    const intended = parseFloat(document.getElementById('fc_intended_fuel_sp')?.value)||0;
+    const toRefuelKg = Math.max(0, intended - inHelo);
+    const toRefuelLtr = (toRefuelKg/0.8).toFixed(1);
+    const toRefuelLb = (toRefuelKg*2.20462).toFixed(1);
+    const ac = AW109SP;
+    const endurance = Math.max(0,(intended - ac.STARTUP_FUEL - ac.SAFETY_FUEL)/ac.FUEL_CONS);
+    const endH=Math.floor(endurance/60), endM=Math.round(endurance%60);
+    const el = document.getElementById('fc_result_sp');
+    if(!el) return;
+    el.innerHTML = `
+      <div style="color:var(--text-secondary)">Fuel in helo: <span style="color:var(--accent-cyan)">${inHelo} kg</span></div>
+      <div style="color:var(--text-secondary)">Intended fuel: <span style="color:var(--accent-amber)">${intended} kg</span></div>
+      <div style="border-top:1px solid var(--border-dim);margin:4px 0;padding-top:4px">
+        To refuel: <span style="color:var(--accent-green);font-weight:700">${toRefuelKg} kg</span>
+      </div>
+      <div style="color:var(--text-secondary)">= <span style="color:var(--accent-cyan)">${toRefuelLtr} litres</span></div>
+      <div style="color:var(--text-secondary)">= <span style="color:var(--text-bright)">${toRefuelLb} lbs</span></div>
+      <div style="color:var(--text-secondary);margin-top:4px">Endurance: <span style="color:var(--accent-green);font-weight:700">${endH}h ${String(endM).padStart(2,'0')}min</span></div>`;
+  };
+  window.fcCalc = function(){
+    const inHelo = parseFloat(document.getElementById('fc_fuel_in_helo')?.value)||0;
+    const intended = parseFloat(document.getElementById('fc_intended_fuel')?.value)||0;
+    const toRefuelKg = Math.max(0, intended - inHelo);
+    const toRefuelLtr = (toRefuelKg/0.8).toFixed(1);
+    const toRefuelLb = (toRefuelKg*2.20462).toFixed(1);
+    const el = document.getElementById('fc_result');
+    if(!el) return;
+    el.innerHTML = `
+      <div style="color:var(--text-secondary)">Fuel in helo: <span style="color:var(--accent-cyan)">${inHelo} kg</span></div>
+      <div style="color:var(--text-secondary)">Intended fuel: <span style="color:var(--accent-amber)">${intended} kg</span></div>
+      <div style="border-top:1px solid var(--border-dim);margin:4px 0;padding-top:4px">
+        To refuel: <span style="color:var(--accent-green);font-weight:700">${toRefuelKg} kg</span>
+      </div>
+      <div style="color:var(--text-secondary)">= <span style="color:var(--accent-cyan)">${toRefuelLtr} litres</span></div>
+      <div style="color:var(--text-secondary)">= <span style="color:var(--text-bright)">${toRefuelLb} lbs</span></div>`;
+  };
+  // Fuel calc sidebar toggle
+  document.getElementById('fuelCalcToggle').onclick=function(){
+    const panel=document.getElementById('fuelCalcPanel');
+    const arrow=document.getElementById('fuelCalcArrow');
+    const open=panel.style.display!=='none';
+    panel.style.display=open?'none':'';
+    arrow.textContent=open?'▶ EXPAND':'▼ COLLAPSE';
+  };
+
+  /* ---- Print Brief open/close ---- */
   document.getElementById('printBriefBtn').onclick=function(){
     document.getElementById('briefModal').style.display='block';
+    bfGoStep(1);
+    // Reset SP checkboxes to default state
+    ['sp_rm_cushion','sp_rm_flir','sp_rm_rearseat3','sp_rm_rearseat1'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.checked=true;
+    });
+    ['sp_floats','sp_nightsun','sp_winch','sp_cargohook','sp_flirconsole',
+     'sp_vipseat','sp_stretcher','sp_oxygen','sp_gunpintle','sp_gun','sp_towbar'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.checked=false;
+    });
+    const ljEl=document.getElementById('sp_lj_count'); if(ljEl) ljEl.value=0;
+    bfSelectAc('109E');
+    bfWbUpdate();
   };
   document.getElementById('closeBriefBtn').onclick=function(){
     document.getElementById('briefModal').style.display='none';
   };
-  window.calcEndurance=function(){
-    const fuel=parseFloat(document.getElementById('bf_fuel').value)||0;
-    const rate=parseFloat(document.getElementById('bf_fuelrate').value)||0;
-    if(fuel>0&&rate>0){
-      const hrs=fuel/rate;
-      const h=Math.floor(hrs);const m=Math.round((hrs-h)*60);
-      document.getElementById('bf_endurance').value=h+'h '+m+'min';
-    }else{
-      document.getElementById('bf_endurance').value='';
+  document.getElementById('closeBriefBtn2').onclick=function(){
+    document.getElementById('briefModal').style.display='none';
+  };
+  window.calcEndurance=function(){}; // legacy stub
+
+  /* ---- PRINT PDF ---- */
+
+  /* ---- PILOT CARD (compact, thigh-pad size) ---- */
+  function doPrintPilotCard(){
+    const g=id=>document.getElementById(id)?.value||'—';
+    const d=window._bfData;
+    const fuelOK=(d.fuelTaken||0)>=(d.fuelRequired||0);
+    const now=new Date();
+    const dtStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+'L';
+
+    /* ---- Route table rows ---- */
+    let routeRows='';
+    if(d.legs&&d.legs.length>0){
+      d.legs.forEach((leg,i)=>{
+        const holdEl=selected[i+1]?document.getElementById('hold_'+selected[i+1]):null;
+        const holdMin=parseFloat(holdEl?.value)||0;
+        const a=waypoints.find(w=>w.name===leg.from);
+        const b=waypoints.find(w=>w.name===leg.to);
+        routeRows+=`<tr>
+          <td>${i+1}</td>
+          <td><b>${leg.from}</b><br><span style="font-size:7px;color:#666">${a?formatDMS(a.lat,true)+' '+formatDMS(a.lon,false):''}</span></td>
+          <td><b>${leg.to}</b><br><span style="font-size:7px;color:#666">${b?formatDMS(b.lat,true)+' '+formatDMS(b.lon,false):''}</span></td>
+          <td>${leg.dist.toFixed(1)}</td>
+          <td>${leg.brg.toFixed(0)}°</td>
+          <td>${leg.min.toFixed(0)}${holdMin>0?' +'+holdMin+'H':''}</td>
+        </tr>`;
+      });
+      routeRows+=`<tr style="background:#f0f0f0;font-weight:700">
+        <td colspan="3" style="text-align:right">TOTAL</td>
+        <td>${(d.totalDist||0).toFixed(1)} NM</td><td>—</td>
+        <td>${(d.totalTime||0).toFixed(0)} min</td>
+      </tr>`;
+    } else {
+      routeRows='<tr><td colspan="6" style="text-align:center;color:#888">No route</td></tr>';
     }
+
+    /* ---- North-up route diagram SVG ---- */
+    let routeSVG = '';
+    if(d.legs && d.legs.length>0){
+      // Collect all waypoint lat/lon from the selected route
+      const pts = [];
+      selected.forEach(id=>{
+        const wp = waypoints.find(w=>w.id===id);
+        if(wp) pts.push({name:wp.name, lat:wp.lat, lon:wp.lon});
+      });
+
+      if(pts.length>=2){
+        const svgW=200, svgH=180, pad=22;
+        // Convert lat/lon to SVG coords: north-up (lat inverted), scale to fit
+        const lats = pts.map(p=>p.lat);
+        const lons = pts.map(p=>p.lon);
+        const minLat=Math.min(...lats), maxLat=Math.max(...lats);
+        const minLon=Math.min(...lons), maxLon=Math.max(...lons);
+        const dLat=maxLat-minLat||0.01, dLon=maxLon-minLon||0.01;
+        // Keep aspect ratio — use the tighter scale
+        const scaleX=(svgW-pad*2)/dLon;
+        const scaleY=(svgH-pad*2)/dLat;
+        const scale=Math.min(scaleX,scaleY);
+        const offX=(svgW-dLon*scale)/2;
+        const offY=(svgH-dLat*scale)/2;
+        const sx=lon=>offX+(lon-minLon)*scale;
+        const sy=lat=>svgH-offY-(lat-minLat)*scale; // invert: north=up
+
+        // Build polyline points
+        const polyPts=pts.map(p=>`${sx(p.lon).toFixed(1)},${sy(p.lat).toFixed(1)}`).join(' ');
+
+        // Arrowhead marker + leg label helpers
+        let defs=`<defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#003087"/></marker></defs>`;
+        let lines='', dots='', labels='';
+
+        for(let i=0;i<pts.length-1;i++){
+          const x1=sx(pts[i].lon), y1=sy(pts[i].lat);
+          const x2=sx(pts[i+1].lon), y2=sy(pts[i+1].lat);
+          // Shorten line slightly so arrowhead sits before dot
+          const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy)||1;
+          const ex=x2-dx/len*5, ey=y2-dy/len*5;
+          lines+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#003087" stroke-width="1.5" marker-end="url(#arr)"/>`;
+          // Bearing label midpoint
+          const mx=((x1+x2)/2).toFixed(1), my=((y1+y2)/2).toFixed(1);
+          const leg=d.legs[i];
+          if(leg) labels+=`<text x="${mx}" y="${(+my-3).toFixed(1)}" text-anchor="middle" font-size="6.5" fill="#555" font-family="Arial">${leg.brg.toFixed(0)}° / ${leg.dist.toFixed(0)}NM</text>`;
+        }
+
+        pts.forEach((p,i)=>{
+          const cx=sx(p.lon).toFixed(1), cy=sy(p.lat).toFixed(1);
+          const isFirst=i===0, isLast=i===pts.length-1;
+          dots+=`<circle cx="${cx}" cy="${cy}" r="${isFirst||isLast?5:3.5}" fill="${isFirst?'#006400':isLast?'#cc0000':'#003087'}" stroke="#fff" stroke-width="1"/>`;
+          // Label position: try to avoid edge clipping
+          const lx=+cx+(+cx>svgW-50?-4:4);
+          const ly=+cy+(+cy<20?10:-4);
+          const anchor=+cx>svgW-50?'end':'start';
+          labels+=`<text x="${lx}" y="${ly}" text-anchor="${anchor}" font-size="7.5" font-weight="700" fill="#000" font-family="Arial">${p.name}</text>`;
+        });
+
+        // North arrow
+        const nArr=`<g transform="translate(${svgW-14},14)">
+          <line x1="0" y1="8" x2="0" y2="-8" stroke="#333" stroke-width="1.2"/>
+          <polygon points="0,-10 -3,-4 3,-4" fill="#333"/>
+          <text x="0" y="17" text-anchor="middle" font-size="7" fill="#333" font-family="Arial" font-weight="700">N</text>
+        </g>`;
+
+        // Scale bar (rough — based on leftmost two pts if >1 leg)
+        const kmPerDeg=111; // approx
+        const barNM=Math.round(dLat*kmPerDeg*0.54||10); // rough NM across
+        const niceBar=barNM<=5?5:barNM<=10?10:barNM<=20?20:50;
+        const barPx=(niceBar/(dLat*kmPerDeg*0.54||10))*(svgH-pad*2);
+        const scaleBar=`<g transform="translate(${pad},${svgH-8})">
+          <line x1="0" y1="0" x2="${Math.min(barPx,80).toFixed(0)}" y2="0" stroke="#333" stroke-width="1.5"/>
+          <line x1="0" y1="-3" x2="0" y2="3" stroke="#333" stroke-width="1"/>
+          <line x1="${Math.min(barPx,80).toFixed(0)}" y1="-3" x2="${Math.min(barPx,80).toFixed(0)}" y2="3" stroke="#333" stroke-width="1"/>
+          <text x="${(Math.min(barPx,80)/2).toFixed(0)}" y="-4" text-anchor="middle" font-size="6" fill="#333" font-family="Arial">${niceBar} NM</text>
+        </g>`;
+
+        routeSVG=`<svg width="${svgW}" height="${svgH}" style="border:1px solid #ccc;border-radius:3px;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg">
+          ${defs}
+          <rect width="${svgW}" height="${svgH}" fill="#f8faff"/>
+          ${lines}${dots}${labels}${nArr}${scaleBar}
+        </svg>`;
+      }
+    }
+
+    const pilotHTML=`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Pilot Card - ${g('bf_callsign')}</title>
+    <style>
+      @page{size:A5 portrait;margin:7mm}
+      body{font-family:'Arial',sans-serif;font-size:9px;color:#000;margin:0;padding:0;background:#fff}
+      h1{text-align:center;font-size:12px;letter-spacing:2px;margin:0 0 1px;border-bottom:2px solid #000;padding-bottom:3px}
+      .meta{text-align:center;font-size:7.5px;color:#555;margin-bottom:5px}
+      .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #000;margin-bottom:5px}
+      .g2{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #000;margin-bottom:5px}
+      .cell{border:1px solid #bbb;padding:2px 4px}
+      .lbl{font-size:6.5px;font-weight:700;letter-spacing:0.7px;color:#555;text-transform:uppercase}
+      .val{font-size:9.5px;font-weight:700;margin-top:1px}
+      h2{font-size:7.5px;letter-spacing:1.5px;background:#222;color:#fff;padding:2px 6px;margin:4px 0 0}
+      table{width:100%;border-collapse:collapse;font-size:8px;margin-bottom:5px}
+      th{background:#333;color:#fff;padding:2px 3px;text-align:center;font-size:7px}
+      td{border:1px solid #ccc;padding:2px 3px;text-align:center;vertical-align:middle}
+      tr:nth-child(even)td{background:#f8f8f8}
+      .notam{border:1px solid #bbb;padding:4px 6px;font-size:8px;margin-bottom:5px;white-space:pre-wrap;min-height:22px}
+      .layout{display:grid;grid-template-columns:1fr 210px;gap:8px;align-items:start}
+      .credit{font-size:6.5px;color:#777;letter-spacing:1px;margin-top:5px;border-top:1px solid #ccc;padding-top:4px;text-align:center}
+      @media print{button{display:none!important}}
+    </style></head><body>
+    <h1>PILOT CARD — ${bfSelectedAc==="109SP"?"AW109SP":"AW109E"}</h1>
+    <div class="meta">${g('bf_callsign')} &nbsp;|&nbsp; ${g('bf_mission')} &nbsp;|&nbsp; ETD: ${g('bf_etd')} &nbsp;|&nbsp; ${dtStr}</div>
+
+    <div class="g3">
+      <div class="cell"><div class="lbl">Pilot</div><div class="val">${g('bf_pilot')}</div></div>
+      <div class="cell"><div class="lbl">Co-Pilot</div><div class="val">${g('bf_copilot')}</div></div>
+      <div class="cell"><div class="lbl">Rear Crew</div><div class="val">${g('bf_rearcrew')}</div></div>
+      <div class="cell"><div class="lbl">Altitude</div><div class="val">${g('bf_altitude')}</div></div>
+      <div class="cell"><div class="lbl">Frequencies</div><div class="val">${g('bf_freq')}</div></div>
+      <div class="cell"><div class="lbl">Cruise Spd</div><div class="val">${d.spd||'—'} kts</div></div>
+    </div>
+
+    <div class="layout">
+      <div>
+        <h2>ROUTE — ${d.isReturn?'ROUND TRIP':'ONE WAY'}</h2>
+        <table style="margin-top:0">
+          <thead><tr><th>#</th><th>FROM</th><th>TO</th><th>DIST (NM)</th><th>BRG</th><th>TIME (min)</th></tr></thead>
+          <tbody>${routeRows}</tbody>
+        </table>
+        <h2>NOTAM</h2>
+        <div class="notam">${g('bf_notam').replace(/\n/g,'<br>')}</div>
+        <h2>SPECIAL NOTE</h2>
+        <div class="notam">${g('bf_special').replace(/\n/g,'<br>')}</div>
+        <h2>IN-FLIGHT INFO</h2>
+        <div style="border:1px solid #bbb;border-radius:2px;padding:4px 6px;margin-bottom:5px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+            <div style="border:1px solid #ddd;padding:3px 5px"><div style="font-size:6.5px;font-weight:700;letter-spacing:0.7px;color:#555;text-transform:uppercase">Squawk</div><div style="height:14px"></div></div>
+            <div style="border:1px solid #ddd;padding:3px 5px"><div style="font-size:6.5px;font-weight:700;letter-spacing:0.7px;color:#555;text-transform:uppercase">Freq Assigned</div><div style="height:14px"></div></div>
+            <div style="border:1px solid #ddd;padding:3px 5px"><div style="font-size:6.5px;font-weight:700;letter-spacing:0.7px;color:#555;text-transform:uppercase">Clearance</div><div style="height:14px"></div></div>
+            <div style="border:1px solid #ddd;padding:3px 5px"><div style="font-size:6.5px;font-weight:700;letter-spacing:0.7px;color:#555;text-transform:uppercase">Alt Assigned</div><div style="height:14px"></div></div>
+          </div>
+          <div style="border:1px solid #ddd;padding:3px 5px;margin-top:0"><div style="font-size:6.5px;font-weight:700;letter-spacing:0.7px;color:#555;text-transform:uppercase">Remarks</div><div style="height:22px"></div></div>
+        </div>
+      </div>
+      <div style="padding-top:4px">
+        <div style="font-size:7px;font-weight:700;letter-spacing:1px;color:#555;text-align:center;margin-bottom:3px">ROUTE DIAGRAM — NORTH UP ↑</div>
+        ${routeSVG||'<div style="border:1px solid #ccc;height:180px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:8px;border-radius:3px">No route</div>'}
+        <div style="font-size:6px;color:#888;text-align:center;margin-top:2px">● DEP &nbsp; ● WPT &nbsp; ● DEST</div>
+      </div>
+    </div>
+
+    <div class="credit">SLAP-GAP · LT CDR SADMAN · P NO 3223 · AW109E PILOT CARD</div>
+    <script>window.onload=function(){window.print();};<\/script>
+    </body></html>`;
+
+    const w=window.open('','_blank','width=740,height=620');
+    w.document.write(pilotHTML);
+    w.document.close();
+  }
+
+  document.getElementById('doPilotCardBtn').onclick=function(){
+    doPrintPilotCard();
   };
   document.getElementById('doPrintBriefBtn').onclick=function(){
-    // Gather brief fields
-    const g=id=>document.getElementById(id).value||'—';
+    const g=id=>document.getElementById(id)?.value||'—';
     const now=new Date();
     const dtStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+
       '  '+now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+'L';
+    const d = window._bfData;
+    const ac = bfSelectedAc==='109SP' ? AW109SP : AW109E;
 
-    // Build route table rows from current selected waypoints & route
-    const speedInput=parseFloat(document.getElementById('speedInput').value)||0;
-    let routeRows='';
-    let totalDist=0,totalTime=0;
-    if(selected.length>=2){
-      for(let i=0;i<selected.length-1;i++){
-        const a=waypoints.find(w=>w.id===selected[i]);
-        const b=waypoints.find(w=>w.id===selected[i+1]);
-        const dist=haversineNM(a.lat,a.lon,b.lat,b.lon);
-        const brg=bearing(a.lat,a.lon,b.lat,b.lon);
-        const t=speedInput>0?dist/speedInput*60:0;
-        totalDist+=dist;totalTime+=t;
-        const etaStr=speedInput>0?t.toFixed(0)+' min':'N/A';
+    // Route rows
+    const spd = d.spd||0;
+    let routeRows='', totalDist=0, totalTime=0;
+    if(d.legs && d.legs.length>0){
+      d.legs.forEach((leg,i)=>{
+        const a=waypoints.find(w=>w.name===leg.from);
+        const b=waypoints.find(w=>w.name===leg.to);
+        const holdEl = selected[i+1]?document.getElementById('hold_'+selected[i+1]):null;
+        const holdMin = parseFloat(holdEl?.value)||0;
+        totalDist+=leg.dist; totalTime+=leg.min;
         routeRows+=`<tr>
           <td>${i+1}</td>
-          <td><b>${a.name}</b></td>
-          <td><b>${b.name}</b></td>
-          <td>${formatDMS(a.lat,true)}<br>${formatDMS(a.lon,false)}</td>
-          <td>${formatDMS(b.lat,true)}<br>${formatDMS(b.lon,false)}</td>
-          <td>${dist.toFixed(2)}</td>
-          <td>${brg.toFixed(1)}°</td>
-          <td>${etaStr}</td>
+          <td><b>${leg.from}</b></td><td><b>${leg.to}</b></td>
+          <td>${a?formatDMS(a.lat,true)+'<br>'+formatDMS(a.lon,false):'—'}</td>
+          <td>${b?formatDMS(b.lat,true)+'<br>'+formatDMS(b.lon,false):'—'}</td>
+          <td>${leg.dist.toFixed(1)}</td>
+          <td>${leg.brg.toFixed(0)}°</td>
+          <td>${leg.min.toFixed(0)} min${holdMin>0?' +'+holdMin+'m hold':''}</td>
         </tr>`;
-      }
+      });
       routeRows+=`<tr style="background:#f0f0f0;font-weight:700">
-        <td colspan="5" style="text-align:right">TOTAL</td>
-        <td>${totalDist.toFixed(2)} NM</td>
-        <td>—</td>
-        <td>${speedInput>0?totalTime.toFixed(0)+' min':'N/A'}</td>
+        <td colspan="5" style="text-align:right">TOTAL${d.isReturn?' (RETURN)':' (ONE WAY)'}</td>
+        <td>${totalDist.toFixed(1)} NM</td><td>—</td>
+        <td>${d.totalTime?d.totalTime.toFixed(0)+' min':'—'}</td>
       </tr>`;
-    }else{
-      routeRows='<tr><td colspan="8" style="text-align:center;color:#888">No route selected on map</td></tr>';
+    } else {
+      routeRows='<tr><td colspan="8" style="text-align:center;color:#888">No route selected</td></tr>';
     }
+
+    // CG SVG envelope chart — larger, properly labelled
+    const cg = d.cg||{};
+    const toOK=cg.toOK, ldOK=cg.ldOK;
+    const svgW=340,svgH=220,padL=42,padB=28,padT=14,padR=16;
+    const _envArms=ac.ENVELOPE.map(([a])=>a), _envWts=ac.ENVELOPE.map(([,w])=>w);
+    const _minA=Math.min(..._envArms)-20, _maxA=Math.max(..._envArms)+20;
+    const _minW=Math.min(..._envWts)-80,  _maxW=Math.max(..._envWts)+80;
+    const xScale=(svgW-padL-padR)/(_maxA-_minA);
+    const yScale=(svgH-padT-padB)/(_maxW-_minW);
+    const sx=a=>padL+(a-_minA)*xScale;
+    const sy=w=>svgH-padB-(w-_minW)*yScale;
+    const envPts=ac.ENVELOPE.map(([a,w])=>`${sx(a).toFixed(1)},${sy(w).toFixed(1)}`).join(' ');
+    const toPt=cg.towArm?`${sx(cg.towArm).toFixed(1)},${sy(cg.towWt).toFixed(1)}`:'';
+    const ldPt=cg.ldwArm?`${sx(cg.ldwArm).toFixed(1)},${sy(cg.ldwWt).toFixed(1)}`:'';
+
+    // Grid lines at envelope key weights
+    const _gridWts=[..._envWts].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b);
+    const _gridArms=[..._envArms].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b);
+    const _gridLines=
+      _gridWts.map(w=>`<line x1="${padL}" y1="${sy(w).toFixed(1)}" x2="${svgW-padR}" y2="${sy(w).toFixed(1)}" stroke="#e0e0e0" stroke-width="0.7"/>
+        <text x="${padL-3}" y="${(sy(w)+3).toFixed(1)}" text-anchor="end" font-size="7" fill="#888">${w}</text>`).join('')+
+      _gridArms.map(a=>`<line x1="${sx(a).toFixed(1)}" y1="${padT}" x2="${sx(a).toFixed(1)}" y2="${svgH-padB}" stroke="#e0e0e0" stroke-width="0.7"/>
+        <text x="${sx(a).toFixed(1)}" y="${svgH-padB+9}" text-anchor="middle" font-size="7" fill="#888">${a}</text>`).join('');
+
+    const cgSVG=`<svg width="${svgW}" height="${svgH}" style="border:1px solid #bbb;display:block;margin:0 auto;background:#fafff9">
+      ${_gridLines}
+      <polygon points="${envPts}" fill="rgba(0,100,0,0.10)" stroke="#006400" stroke-width="2"/>
+      ${toPt?`<circle cx="${toPt.split(',')[0]}" cy="${toPt.split(',')[1]}" r="6" fill="${toOK?'#006400':'#cc0000'}" stroke="#000" stroke-width="1"/>
+      <text x="${(+toPt.split(',')[0]+9).toFixed(0)}" y="${(+toPt.split(',')[1]+4).toFixed(0)}" font-size="9" font-weight="bold" fill="#006400">TO ${cg.towWt?Math.round(cg.towWt)+'kg':''}</text>`:''}
+      ${ldPt?`<polygon points="${[[-6,0],[0,-6],[6,0],[0,6]].map(([dx,dy])=>`${(+ldPt.split(',')[0]+dx).toFixed(0)},${(+ldPt.split(',')[1]+dy).toFixed(0)}`).join(' ')}" fill="${ldOK?'#00008b':'#cc0000'}" stroke="#000" stroke-width="1"/>
+      <text x="${(+ldPt.split(',')[0]+9).toFixed(0)}" y="${(+ldPt.split(',')[1]+4).toFixed(0)}" font-size="9" font-weight="bold" fill="#00008b">LD ${cg.ldwWt?Math.round(cg.ldwWt)+'kg':''}</text>`:''}
+      <text x="${svgW/2}" y="${svgH-3}" text-anchor="middle" font-size="8" fill="#555">Longitudinal Station (mm)</text>
+      <text x="9" y="${svgH/2}" text-anchor="middle" font-size="8" fill="#555" transform="rotate(-90,9,${svgH/2})">Gross Weight (kg)</text>
+    </svg>`;
+
+    const carriedList = (d.carriedItems||[]).map(i=>`<tr><td>${i.label}</td><td style="text-align:right">${i.wt.toFixed(2)} kg</td></tr>`).join('');
+    const verdictColor = (cg.fullVerdict||cg.verdict)==='GO'?'#006400':'#cc0000';
+    const pbVerdict = cg.fullVerdict || cg.verdict;
+    const fuelStatusColor = (d.fuelTaken||0)>=(d.fuelRequired||0)?'#006400':'#cc0000';
 
     const briefHTML=`<!DOCTYPE html><html><head><meta charset="utf-8">
     <title>Flight Brief - ${g('bf_callsign')}</title>
     <style>
-      body{font-family:'Arial',sans-serif;font-size:12px;color:#000;margin:0;padding:20px;background:#fff}
-      h1{text-align:center;font-size:17px;letter-spacing:2px;margin:0 0 2px;border-bottom:3px solid #000;padding-bottom:6px}
-      .meta{text-align:center;font-size:10px;color:#555;margin-bottom:14px}
-      .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #000;margin-bottom:12px}
-      .cell{border:1px solid #aaa;padding:5px 8px}
+      body{font-family:'Arial',sans-serif;font-size:12px;color:#000;margin:0;padding:16px;background:#fff}
+      h1{text-align:center;font-size:16px;letter-spacing:2px;margin:0 0 2px;border-bottom:3px solid #000;padding-bottom:5px}
+      .meta{text-align:center;font-size:10px;color:#555;margin-bottom:12px}
+      .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #000;margin-bottom:10px}
+      .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #000;margin-bottom:10px}
+      .cell{border:1px solid #aaa;padding:4px 7px}
       .cell .lbl{font-size:9px;font-weight:700;letter-spacing:1px;color:#555;text-transform:uppercase}
       .cell .val{font-size:12px;font-weight:600;margin-top:1px}
-      .wx-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #000;margin-bottom:12px}
-      h2{font-size:11px;letter-spacing:2px;background:#222;color:#fff;padding:4px 10px;margin:10px 0 0}
-      table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px}
-      th{background:#333;color:#fff;padding:5px 6px;text-align:center;font-size:10px;letter-spacing:0.5px}
-      td{border:1px solid #ccc;padding:4px 6px;text-align:center;vertical-align:middle}
+      h2{font-size:10px;letter-spacing:2px;background:#222;color:#fff;padding:3px 9px;margin:8px 0 0}
+      table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px}
+      th{background:#333;color:#fff;padding:4px 5px;text-align:center;font-size:9px;letter-spacing:0.5px}
+      td{border:1px solid #ccc;padding:3px 5px;text-align:center;vertical-align:middle}
       tr:nth-child(even)td{background:#f7f7f7}
-      .notam{border:1px solid #000;padding:8px;min-height:50px;font-size:11px;margin-bottom:12px;white-space:pre-wrap}
-      .credit{text-align:center;font-size:9px;color:#777;margin-top:18px;border-top:1px solid #ccc;padding-top:6px;letter-spacing:1.5px}
-      @media print{body{padding:10px}button{display:none!important}}
+      .notam{border:1px solid #000;padding:7px;min-height:40px;font-size:10px;margin-bottom:10px;white-space:pre-wrap}
+      .verdict-box{border:3px solid ${verdictColor};border-radius:4px;padding:8px 16px;text-align:center;margin:8px 0;display:inline-block}
+      .verdict{font-size:22px;font-weight:900;letter-spacing:4px;color:${verdictColor}}
+      .credit{text-align:center;font-size:9px;color:#777;margin-top:14px;border-top:1px solid #ccc;padding-top:5px;letter-spacing:1.5px}
+      @media print{body{padding:8px}button{display:none!important}.no-break{page-break-inside:avoid}}
     </style></head><body>
     <h1>FLIGHT BRIEFING SHEET</h1>
-    <div class="meta">Generated: ${dtStr}</div>
+    <div class="meta">Generated: ${dtStr} &nbsp;|&nbsp; Aircraft: <b>${bfSelectedAc==="109SP"?"AW109SP":"AW109E"}</b></div>
 
     <h2>MISSION DETAILS</h2>
-    <div class="grid">
+    <div class="grid3">
       <div class="cell"><div class="lbl">Callsign</div><div class="val">${g('bf_callsign')}</div></div>
-      <div class="cell"><div class="lbl">Aircraft</div><div class="val">${g('bf_aircraft')}</div></div>
       <div class="cell"><div class="lbl">Mission</div><div class="val">${g('bf_mission')}</div></div>
+      <div class="cell"><div class="lbl">Aircraft</div><div class="val">${bfSelectedAc==="109SP"?"AW109SP":"AW109E"}</div></div>
       <div class="cell"><div class="lbl">Pilot</div><div class="val">${g('bf_pilot')}</div></div>
       <div class="cell"><div class="lbl">Co-Pilot</div><div class="val">${g('bf_copilot')}</div></div>
       <div class="cell"><div class="lbl">Rear Crew</div><div class="val">${g('bf_rearcrew')}</div></div>
       <div class="cell"><div class="lbl">ETD</div><div class="val">${g('bf_etd')}</div></div>
-      <div class="cell"><div class="lbl">Duration</div><div class="val">${g('bf_duration')} min</div></div>
-      <div class="cell"><div class="lbl">AUW</div><div class="val">${g('bf_auw')} kg</div></div>
       <div class="cell"><div class="lbl">Altitude</div><div class="val">${g('bf_altitude')}</div></div>
-      <div class="cell"><div class="lbl">Fuel Taken</div><div class="val">${g('bf_fuel')} ltr</div></div>
-      <div class="cell"><div class="lbl">Endurance</div><div class="val">${g('bf_endurance')}</div></div>
-      <div class="cell"><div class="lbl">Cons Rate</div><div class="val">${g('bf_fuelrate')} ltr/hr</div></div>
       <div class="cell"><div class="lbl">Frequencies</div><div class="val">${g('bf_freq')}</div></div>
     </div>
 
     <h2>WEATHER</h2>
-    <div class="wx-grid">
+    <div class="grid3">
       <div class="cell"><div class="lbl">Airfield State</div><div class="val">${g('bf_wx_airfield')}</div></div>
       <div class="cell"><div class="lbl">Dep Visibility</div><div class="val">${g('bf_wx_depvis')}</div></div>
       <div class="cell"><div class="lbl">Dest Visibility</div><div class="val">${g('bf_wx_destvis')}</div></div>
       <div class="cell"><div class="lbl">Cloud</div><div class="val">${g('bf_wx_cloud')}</div></div>
       <div class="cell"><div class="lbl">Wind</div><div class="val">${g('bf_wx_wind')}</div></div>
-      <div class="cell"><div class="lbl">Weather Warning</div><div class="val">${g('bf_wx_warn')}</div></div>
+      <div class="cell"><div class="lbl">Wx Warning</div><div class="val">${g('bf_wx_warn')}</div></div>
     </div>
 
-    <h2>ROUTE PLAN</h2>
+    <h2>WEIGHT &amp; FUEL SUMMARY</h2>
+    <div class="grid3">
+      <div class="cell"><div class="lbl">Zero Fuel Wt</div><div class="val">${fmt1(d.zfw||0)} kg</div></div>
+      <div class="cell"><div class="lbl">Fuel Required</div><div class="val">${d.fuelRequired||'—'} kg</div></div>
+      <div class="cell"><div class="lbl">Fuel Allowed</div><div class="val">${fmt0(d.fuelAllowed||0)} kg</div></div>
+      <div class="cell"><div class="lbl">Fuel Taken</div><div class="val">${d.fuelTaken||'—'} kg</div></div>
+      <div class="cell"><div class="lbl">Ramp Wt</div><div class="val">${fmt1((d.zfw||0)+(d.fuelTaken||0))} kg</div></div>
+      <div class="cell"><div class="lbl">Take-Off Wt (−30kg start)</div><div class="val" style="color:${((d.zfw||0)+(d.fuelTaken||0)-30)>(bfSelectedAc==='109SP'?AW109SP.MAX_AUW:AW109E.MAX_AUW)?'#cc0000':'inherit'};font-weight:700">${fmt1((d.zfw||0)+(d.fuelTaken||0)-30)} kg</div></div>
+      <div class="cell"><div class="lbl">Max AUW (T/O)</div><div class="val">${bfSelectedAc==="109SP"?AW109SP.MAX_AUW:AW109E.MAX_AUW} kg</div></div>
+      <div class="cell"><div class="lbl">Endurance</div><div class="val">${d.endH||0}h ${String(d.endM||0).padStart(2,'0')}min</div></div>
+      <div class="cell"><div class="lbl">Fuel Status</div><div class="val" style="color:${fuelStatusColor};font-weight:700">${(d.fuelTaken||0)>=(d.fuelRequired||0)?'SUFFICIENT':'INSUFFICIENT'}</div></div>
+      <div class="cell"><div class="lbl">Addl PAX Possible</div><div class="val">${d.paxCapFuelTaken||'—'}</div></div>
+    </div>
+
+    <h2>EQUIPMENT CARRIED</h2>
+    <table style="margin-bottom:8px">
+      <thead><tr><th style="text-align:left">Item</th><th>Weight</th><th style="text-align:left">Item</th><th>Weight</th></tr></thead>
+      <tbody id="equip-rows">
+        ${(()=>{
+          const items=[...( d.carriedItems||[]).map(i=>({l:i.label,w:i.wt.toFixed(2)+' kg'})),
+            ...(d.pax>0?[{l:'Passengers ×'+d.pax,w:(d.pax*75).toFixed(1)+' kg'}]:[]),
+            ...(d.baggage>0?[{l:'Baggage',w:d.baggage+' kg'}]:[]),
+            ...(d.support>0?[{l:'Supporting Items',w:d.support+' kg'}]:[])];
+          if(!items.length) return '<tr><td colspan="4" style="text-align:center;color:#888">None selected</td></tr>';
+          let rows='';
+          for(let i=0;i<items.length;i+=2){
+            rows+=`<tr><td style="text-align:left">${items[i].l}</td><td style="text-align:right">${items[i].w}</td>
+            <td style="text-align:left">${items[i+1]?items[i+1].l:''}</td><td style="text-align:right">${items[i+1]?items[i+1].w:''}</td></tr>`;
+          }
+          return rows;
+        })()}
+      </tbody>
+    </table>
+
+    <h2>ROUTE PLAN — ${d.isReturn?'ROUND TRIP':'ONE WAY'} | Cruise: ${d.spd||'—'} kts | +2 min/waypoint</h2>
     <table>
       <thead><tr>
         <th>#</th><th>FROM</th><th>TO</th><th>FROM COORDS</th><th>TO COORDS</th>
-        <th>DIST (NM)</th><th>BRG</th><th>ETA</th>
+        <th>DIST (NM)</th><th>BRG</th><th>TIME</th>
       </tr></thead>
       <tbody>${routeRows}</tbody>
     </table>
 
+    <h2>CENTRE OF GRAVITY — ${bfSelectedAc==="109SP"?"AW109SP":"AW109E"}</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;align-items:start">
+      <table style="margin:0;font-size:10px">
+        <thead><tr><th style="text-align:left">Station</th><th>Wt (kg)</th><th>Arm (mm)</th><th>Moment</th></tr></thead>
+        <tbody>
+          <tr><td style="text-align:left">Equipped Empty</td><td>${fmt1(cg.equipArmWt||0)}</td><td>3542</td><td>${Math.round((cg.equipArmWt||0)*3542.261)}</td></tr>
+          <tr><td style="text-align:left">Pilot</td><td>${cg.pilot||75}</td><td>${bfSelectedAc==='109SP'?AW109SP.PILOT_ARM:AW109E.PILOT_ARM}</td><td>${Math.round((cg.pilot||75)*(bfSelectedAc==='109SP'?AW109SP.PILOT_ARM:AW109E.PILOT_ARM))}</td></tr>
+          <tr><td style="text-align:left">Co-Pilot / PAX</td><td>${cg.copilot||75}</td><td>${bfSelectedAc==='109SP'?AW109SP.COPILOT_ARM:AW109E.COPILOT_ARM}</td><td>${Math.round((cg.copilot||75)*(bfSelectedAc==='109SP'?AW109SP.COPILOT_ARM:AW109E.COPILOT_ARM))}</td></tr>
+          ${(()=>{const _fA=bfSelectedAc==='109SP'?AW109SP.FWD_CABIN_ARM:2455;const _aA=bfSelectedAc==='109SP'?AW109SP.AFT_CABIN_ARM:3200;const _bA=bfSelectedAc==='109SP'?AW109SP.BAG_Z1_ARM:5696;return [
+            (cg.fwdL||0)>0?`<tr><td style="text-align:left">Fwd-L PAX</td><td>${cg.fwdL}</td><td>${_fA}</td><td>${Math.round(cg.fwdL*_fA)}</td></tr>`:'',
+            (cg.fwdC||0)>0?`<tr><td style="text-align:left">Fwd-C PAX</td><td>${cg.fwdC}</td><td>${_fA}</td><td>${Math.round(cg.fwdC*_fA)}</td></tr>`:'',
+            (cg.fwdR||0)>0?`<tr><td style="text-align:left">Fwd-R PAX</td><td>${cg.fwdR}</td><td>${_fA}</td><td>${Math.round(cg.fwdR*_fA)}</td></tr>`:'',
+            (cg.aftL||0)>0?`<tr><td style="text-align:left">Aft-L PAX</td><td>${cg.aftL}</td><td>${_aA}</td><td>${Math.round(cg.aftL*_aA)}</td></tr>`:'',
+            (cg.aftC||0)>0?`<tr><td style="text-align:left">Aft-C PAX</td><td>${cg.aftC}</td><td>${_aA}</td><td>${Math.round(cg.aftC*_aA)}</td></tr>`:'',
+            (cg.aftR||0)>0?`<tr><td style="text-align:left">Aft-R PAX</td><td>${cg.aftR}</td><td>${_aA}</td><td>${Math.round(cg.aftR*_aA)}</td></tr>`:'',
+            (cg.bag||0)>0?`<tr><td style="text-align:left">Baggage</td><td>${cg.bag}</td><td>${_bA}</td><td>${Math.round(cg.bag*_bA)}</td></tr>`:'',
+          ].join('');})()}
+          ${cg.paxMismatch?`<tr><td colspan="4" style="color:#cc0000;font-weight:700;text-align:left">⚠ PAX weight mismatch: Step 2 = ${cg.step2PaxTotal} kg, CG seats = ${cg.cgPaxTotal} kg</td></tr>`:''}
+          <tr style="background:#f0f0f0;font-weight:700"><td style="text-align:left">Zero Fuel Weight</td><td>${fmt1(cg.zfwWt||0)}</td><td>${Math.round(cg.zfwArm||0)}</td><td>—</td></tr>
+          <tr><td style="text-align:left">Take-Off Fuel</td><td>${cg.fuelTO||0}</td><td>${bfSelectedAc==='109SP'?spFuelArm(cg.fuelTO||0):AW109E.FUEL_ARM_TO}</td><td>${Math.round((cg.fuelTO||0)*(bfSelectedAc==='109SP'?spFuelArm(cg.fuelTO||0):AW109E.FUEL_ARM_TO))}</td></tr>
+          <tr style="background:#e8f5e9;font-weight:700"><td style="text-align:left">Take-Off Weight</td><td>${fmt1(cg.towWt||0)}</td><td style="color:${toOK?'green':'red'};font-weight:700">${Math.round(cg.towArm||0)} mm</td><td style="color:${toOK?'green':'red'}">${toOK?'✓ IN ENV':'✗ OUTSIDE'}</td></tr>
+          <tr><td style="text-align:left">Burn-Off</td><td>${fmt1(cg.burnOff||0)}</td><td>${bfSelectedAc==='109SP'?AW109SP.BURN_ARM:AW109E.BURN_ARM}</td><td>${Math.round((cg.burnOff||0)*(bfSelectedAc==='109SP'?AW109SP.BURN_ARM:AW109E.BURN_ARM))}</td></tr>
+          <tr style="background:#e3f2fd;font-weight:700"><td style="text-align:left">Landing Weight</td><td>${fmt1(cg.ldwWt||0)}</td><td style="color:${ldOK?'green':'red'};font-weight:700">${Math.round(cg.ldwArm||0)} mm</td><td style="color:${ldOK?'green':'red'}">${ldOK?'✓ IN ENV':'✗ OUTSIDE'}</td></tr>
+        </tbody>
+      </table>
+      <div style="text-align:center">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1px;background:#333;color:#fff;padding:3px 7px;margin-bottom:6px">CG ENVELOPE — ${bfSelectedAc==="109SP"?"AW109SP":"AW109E"}</div>
+        ${cgSVG}
+        <div style="font-size:8px;color:#555;margin-top:4px">● TO Point (circle) &nbsp; ◆ LD Point (diamond)</div>
+        <div style="margin-top:10px" class="verdict-box">
+          <div class="verdict">${pbVerdict||'—'}</div>
+          <div style="font-size:9px;color:#555;margin-top:2px">${cg.overweight?'⚠ EXCEEDS MAX AUW |':''}  TO CG: ${toOK?'OK':'CHECK'} &nbsp;|&nbsp; LD CG: ${ldOK?'OK':'CHECK'}</div>
+        </div>
+      </div>
+    </div>
+
     <h2>NOTAM</h2>
-    <div class="notam">${g('bf_notam').replace(/\n/g,'<br>')}</div>
+    <div class="notam" style="min-height:36px">${g('bf_notam').replace(/\n/g,'<br>')}</div>
 
     <h2>SPECIAL NOTE</h2>
-    <div class="notam" style="min-height:35px">${g('bf_special').replace(/\n/g,'<br>')}</div>
+    <div class="notam" style="min-height:28px">${g('bf_special').replace(/\n/g,'<br>')}</div>
 
-    <div class="credit">SLAP-GAP &nbsp;|&nbsp; LT CDR SADMAN &nbsp;|&nbsp; P NO 3223 &nbsp;|&nbsp; Air Nav Pro</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:12px;border-top:1px solid #ccc;padding-top:8px">
+      <div class="credit" style="margin:0;border:none;padding:0">SLAP-GAP &nbsp;|&nbsp; LT CDR SADMAN &nbsp;|&nbsp; P NO 3223 &nbsp;|&nbsp; Air Nav Pro</div>
+      <div style="text-align:center;min-width:200px">
+        <div style="border-bottom:1px solid #000;height:36px;margin-bottom:4px"></div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:1px">SIGNATURE OF PIC</div>
+        <div style="font-size:8px;color:#777;margin-top:2px">${g('bf_pilot')} &nbsp;|&nbsp; ${g('bf_etd')}</div>
+      </div>
+    </div>
     <script>window.onload=function(){window.print();}<\/script>
     </body></html>`;
 
-    const w=window.open('','_blank','width=900,height=700');
+    const w=window.open('','_blank','width=960,height=750');
     w.document.write(briefHTML);
     w.document.close();
   };
-  /* ================================================
+
+    /* ================================================
      PRE-FLIGHT TILE PRE-CACHER
   ================================================ */
   (function(){
