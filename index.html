@@ -5311,32 +5311,34 @@ document.getElementById('docViewerCloseBtn').onclick = function(){
   //
   //   ±5° near sector boundaries → "Either entry acceptable"
   //
-  function determineEntry(inboundCourse, aircraftHdg, turnDir){
-    const BOUNDARY_TOL = 5; // degrees — within this of a boundary = "Either"
+function determineEntry(inboundCourse, aircraftHdg, turnDir){
+    const BOUNDARY_TOL = 5;
 
     const outbound = norm(inboundCourse + 180);
 
-    // Measure relative angle from INBOUND COURSE to aircraft heading.
-    // Right-turn hold: measure clockwise (aircraft_hdg − inbound).
-    // Left-turn hold:  measure counter-clockwise (inbound − aircraft_hdg).
+    // Measure relative angle FROM the outbound course to the aircraft heading.
+    // Right-turn hold: clockwise from outbound.
+    // Left-turn hold:  counter-clockwise from outbound.
     const rel = turnDir === 'R'
-      ? norm(aircraftHdg - inboundCourse)
-      : norm(inboundCourse - aircraftHdg);
+      ? norm(aircraftHdg - outbound)
+      : norm(outbound - aircraftHdg);
 
-    // Sector boundaries
-    const B_PARALLEL_TEARDROP = 70;   // 0–70° = Parallel
-    const B_TEARDROP_DIRECT   = 180;  // 70–180° = Teardrop, 180–360° = Direct
+    // ICAO sectors measured from outbound course:
+    //   0°   – 110° : DIRECT entry
+    //   110° – 180° : TEARDROP entry
+    //   180° – 360° : PARALLEL entry
 
-    const nearB1 = Math.abs(rel - B_PARALLEL_TEARDROP) <= BOUNDARY_TOL;
-    const nearB2 = Math.abs(rel - B_TEARDROP_DIRECT)   <= BOUNDARY_TOL;
+    const B_DIRECT_TEARDROP  = 110;   // 0–110°   = Direct
+    const B_TEARDROP_PARALLEL = 180;  // 110–180° = Teardrop, 180–360° = Parallel
 
-    // Precompute heading values for instructions
+    const nearB1 = Math.abs(rel - B_DIRECT_TEARDROP)  <= BOUNDARY_TOL;
+    const nearB2 = Math.abs(rel - B_TEARDROP_PARALLEL) <= BOUNDARY_TOL;
+
     const outHdg      = Math.round(outbound);
     const inHdg       = Math.round(norm(inboundCourse));
-    // Teardrop track: 30° into the holding side from outbound
     const teardropHdg = turnDir === 'R'
-      ? Math.round(norm(outbound - 30))   // 30° left of outbound for right-turn hold
-      : Math.round(norm(outbound + 30));  // 30° right of outbound for left-turn hold
+      ? Math.round(norm(outbound - 30))
+      : Math.round(norm(outbound + 30));
 
     if(nearB1 || nearB2){
       return {
@@ -5345,33 +5347,30 @@ document.getElementById('docViewerCloseBtn').onclick = function(){
         cls:'hold-entry-either',
         rel,
         instructions: nearB1
-          ? `Near Parallel/Teardrop boundary (rel ${Math.round(rel)}°).\n✓ Either Parallel or Teardrop entry is acceptable.`
-          : `Near Teardrop/Direct boundary (rel ${Math.round(rel)}°).\n✓ Either Teardrop or Direct entry is acceptable.`
+          ? `Near Direct/Teardrop boundary (rel ${Math.round(rel)}°).\n✓ Either Direct or Teardrop entry is acceptable.`
+          : `Near Teardrop/Parallel boundary (rel ${Math.round(rel)}°).\n✓ Either Teardrop or Parallel entry is acceptable.`
       };
     }
 
-    if(rel < B_PARALLEL_TEARDROP){
-      // PARALLEL ENTRY — aircraft is on holding side, near inbound track
-      // Fly outbound PARALLEL to holding track, then turn to intercept inbound
-      const turnToOutbound = turnDir === 'R' ? 'left'  : 'right'; // turn away from hold
-      const turnToInbound  = turnDir === 'R' ? 'right' : 'left';  // turn back toward hold
+    if(rel < B_DIRECT_TEARDROP){
+      // DIRECT ENTRY — aircraft roughly aligned with or near outbound
+      const turnWord = turnDir === 'R' ? 'right' : 'left';
       return {
-        type:'PARALLEL ENTRY',
-        color:'#00aaff',
-        cls:'hold-entry-parallel',
+        type:'DIRECT ENTRY',
+        color:'#00e676',
+        cls:'hold-entry-direct',
         rel,
         instructions:
-          `1. Cross fix, turn ${turnToOutbound} to outbound hdg ${outHdg}° (parallel to hold).\n` +
+          `1. Cross fix, turn ${turnWord} to outbound hdg ${outHdg}°.\n` +
           `2. Fly outbound for 1 min.\n` +
-          `3. Turn ${turnToInbound} 180° to intercept inbound course ${inHdg}°.\n` +
+          `3. Turn ${turnWord} to intercept inbound course ${inHdg}°.\n` +
           `4. Cross fix; continue standard hold turns.`
       };
     }
 
-    if(rel < B_TEARDROP_DIRECT){
-      // TEARDROP (OFFSET) ENTRY — aircraft on non-holding side, needs offset track
-      const turnToTeardrop = turnDir === 'R' ? 'right' : 'left'; // into holding side
-      const turnToInbound  = turnDir === 'R' ? 'right' : 'left';
+    if(rel < B_TEARDROP_PARALLEL){
+      // TEARDROP ENTRY — aircraft on non-holding side, needs offset track
+      const turnToTeardrop = turnDir === 'R' ? 'right' : 'left';
       return {
         type:'TEARDROP ENTRY',
         color:'#ffab00',
@@ -5380,23 +5379,23 @@ document.getElementById('docViewerCloseBtn').onclick = function(){
         instructions:
           `1. Cross fix, turn ${turnToTeardrop} to hdg ${teardropHdg}° (30° offset into hold).\n` +
           `2. Fly teardrop track for 1 min.\n` +
-          `3. Turn ${turnToInbound} to intercept inbound course ${inHdg}°.\n` +
+          `3. Turn ${turnToTeardrop} to intercept inbound course ${inHdg}°.\n` +
           `4. Cross fix; continue standard hold turns.`
       };
     }
 
-    // DIRECT ENTRY — aircraft is roughly aligned with outbound / non-holding side
-    // Simply turn into the pattern on crossing the fix
-    const turnWord = turnDir === 'R' ? 'right' : 'left';
+    // PARALLEL ENTRY — aircraft on holding side, near inbound track
+    const turnToOutbound = turnDir === 'R' ? 'left'  : 'right';
+    const turnToInbound  = turnDir === 'R' ? 'right' : 'left';
     return {
-      type:'DIRECT ENTRY',
-      color:'#00e676',
-      cls:'hold-entry-direct',
+      type:'PARALLEL ENTRY',
+      color:'#00aaff',
+      cls:'hold-entry-parallel',
       rel,
       instructions:
-        `1. Cross fix, turn ${turnWord} to outbound hdg ${outHdg}°.\n` +
+        `1. Cross fix, turn ${turnToOutbound} to outbound hdg ${outHdg}° (parallel to hold).\n` +
         `2. Fly outbound for 1 min.\n` +
-        `3. Turn ${turnWord} to intercept inbound course ${inHdg}°.\n` +
+        `3. Turn ${turnToInbound} 180° to intercept inbound course ${inHdg}°.\n` +
         `4. Cross fix; continue standard hold turns.`
     };
   }
