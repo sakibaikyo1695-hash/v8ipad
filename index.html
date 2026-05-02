@@ -4952,8 +4952,7 @@ function deleteCachedAreaRecord(id){
     }).catch(err => console.error('Documents list error:', err));
   }
 
-  // ---- Open viewer — native Blob URL in iframe, no pdf.js canvas rendering ----
-  // This avoids the Safari PWA memory crash caused by pdf.js rendering canvases
+  // ---- Open viewer — uses dedicated #docViewerOverlay ----
   window.openDocViewer = function(id){
     getDocById(id).then(function(doc){
       if(!doc){ alert('Document not found.'); return; }
@@ -4961,42 +4960,53 @@ function deleteCachedAreaRecord(id){
       const title   = document.getElementById('docViewerTitle');
       const count   = document.getElementById('docViewerCount');
       const canvas  = document.getElementById('docViewerCanvas');
-      title.textContent = doc.name;
-      count.textContent = '';
-      canvas.innerHTML  = '<div style="color:#fff;font-family:monospace;margin-top:40px;text-align:center;font-size:14px">Opening...</div>';
+      title.textContent  = doc.name;
+      count.textContent  = '';
+      canvas.innerHTML   = '<div style="color:#fff;font-family:monospace;margin-top:40px;text-align:center;font-size:14px">Loading PDF...</div>';
       overlay.style.display = 'flex';
 
-      try {
-        // Build a Blob from stored data (ArrayBuffer or legacy base64)
-        var blob;
+      window.loadPdfJs(function(){
+        // doc.data is ArrayBuffer (new format) or base64 string (old format — auto-detect)
+        var pdfData;
         if(typeof doc.data === 'string'){
-          // Legacy base64 — decode
-          var b64 = doc.data.indexOf(',') >= 0 ? doc.data.split(',')[1] : doc.data;
-          var bStr = atob(b64);
-          var arr  = new Uint8Array(bStr.length);
-          for(var i = 0; i < bStr.length; i++) arr[i] = bStr.charCodeAt(i);
-          blob = new Blob([arr.buffer], {type:'application/pdf'});
+          // Old base64 format — convert safely in chunks to avoid Safari OOM
+          try {
+            var b64 = doc.data.indexOf(',') >= 0 ? doc.data.split(',')[1] : doc.data;
+            var binaryStr = atob(b64);
+            var buf = new Uint8Array(binaryStr.length);
+            for(var i = 0; i < binaryStr.length; i++) buf[i] = binaryStr.charCodeAt(i);
+            pdfData = buf.buffer;
+          } catch(e) {
+            canvas.innerHTML = '<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px;text-align:center">Old format — please delete and re-add this document.</div>';
+            return;
+          }
         } else {
-          blob = new Blob([doc.data], {type:'application/pdf'});
+          pdfData = doc.data; // ArrayBuffer — direct pass
         }
-
-        var url = URL.createObjectURL(blob);
-
-        // Use an <iframe> — Safari's native PDF renderer handles it outside page memory
-        canvas.innerHTML = '';
-        var iframe = document.createElement('iframe');
-        iframe.src   = url;
-        iframe.style.cssText = 'width:100%;height:100%;border:none;flex:1;display:block;';
-        canvas.style.padding = '0';
-        canvas.style.background = '#fff';
-        canvas.appendChild(iframe);
-
-        // Revoke the object URL after a delay to free memory
-        setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
-
-      } catch(e) {
-        canvas.innerHTML = '<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px;text-align:center">Could not open PDF: ' + e.message + '</div>';
-      }
+        pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdf){
+          canvas.innerHTML = '';
+          count.textContent = pdf.numPages + ' page' + (pdf.numPages > 1 ? 's' : '');
+          function renderPage(n){
+            if(n > pdf.numPages) return;
+            pdf.getPage(n).then(function(page){
+              const vp  = page.getViewport({scale: window.devicePixelRatio >= 2 ? 2.5 : 2.0});
+              const cvs = document.createElement('canvas');
+              const ctx = cvs.getContext('2d');
+              cvs.width        = vp.width;
+              cvs.height       = vp.height;
+              cvs.style.width  = Math.min(vp.width, canvas.clientWidth - 20) + 'px';
+              cvs.style.height = 'auto';
+              canvas.appendChild(cvs);
+              page.render({canvasContext: ctx, viewport: vp}).promise.then(function(){
+                renderPage(n + 1);
+              });
+            });
+          }
+          renderPage(1);
+        }).catch(function(err){
+          canvas.innerHTML = '<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px;text-align:center">Error loading PDF: ' + err.message + '</div>';
+        });
+      });
     }).catch(function(err){
       console.error(err); alert('Could not load document.');
     });
@@ -5004,12 +5014,8 @@ function deleteCachedAreaRecord(id){
 
   // Close button for the dedicated doc viewer
   document.getElementById('docViewerCloseBtn').onclick = function(){
-    var overlay = document.getElementById('docViewerOverlay');
-    var canvas  = document.getElementById('docViewerCanvas');
-    overlay.style.display = 'none';
-    canvas.innerHTML   = '';
-    canvas.style.padding    = '10px';
-    canvas.style.background = '#333';
+    document.getElementById('docViewerOverlay').style.display = 'none';
+    document.getElementById('docViewerCanvas').innerHTML = '';
   };
 
   // ---- Delete ----
