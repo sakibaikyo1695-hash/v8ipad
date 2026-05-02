@@ -5422,7 +5422,8 @@ document.getElementById('docViewerCloseBtn').onclick = function(){
     resBox.innerHTML =
       `<div class="hold-entry-type" style="color:${result.color}">${result.type}</div>` +
       `<div style="color:var(--text-secondary);font-size:9px;margin-bottom:4px">` +
-        `Relative angle: ${Math.round(result.rel)}° | Turn: ${holdTurnDir==='R'?'↻ RIGHT':'↺ LEFT'}` +
+        `Inbound: ${Math.round(norm(inVal))}° | HDG: ${Math.round(norm(hdgVal))}° | ` +
+        `Rel angle: ${Math.round(result.rel)}° | Turn: ${holdTurnDir==='R'?'↻ RIGHT':'↺ LEFT'}` +
       `</div>` +
       result.instructions.split('\n').map(l=>`<div>${l}</div>`).join('');
 
