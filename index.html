@@ -730,6 +730,17 @@ textarea{resize:vertical;min-height:55px}
     <div id="plateLoadingMsg" style="color:#fff;font-family:monospace;margin-top:40px;font-size:14px">Loading PDF...</div>
   </div>
 </div>
+
+<!-- DOCUMENTS VIEWER — dedicated overlay, independent of plate viewer -->
+<div id="docViewerOverlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:#000;z-index:20001;display:none;flex-direction:column;">
+  <div style="display:flex;align-items:center;gap:8px;background:var(--bg-panel);border-bottom:1px solid var(--border-glow);padding:8px 12px;flex-shrink:0;flex-wrap:wrap;">
+    <button class="btn small btn-red" id="docViewerCloseBtn" style="flex-shrink:0">✖ CLOSE</button>
+    <div id="docViewerTitle" style="font-family:var(--font-display);font-size:12px;letter-spacing:1.5px;color:var(--accent-amber);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">DOCUMENT</div>
+    <div id="docViewerCount" style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);white-space:nowrap;"></div>
+  </div>
+  <div id="docViewerCanvas" style="flex:1;overflow-y:auto;background:#333;padding:10px;display:flex;flex-direction:column;align-items:center;gap:10px;-webkit-overflow-scrolling:touch;">
+  </div>
+</div>
   <!-- USER GUIDE MODAL -->
 <div id="userGuideModal" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:15000;display:none;overflow:auto;padding:16px;backdrop-filter:blur(4px)">
   <div style="background:var(--bg-panel);border:1px solid var(--border-glow);border-radius:12px;max-width:680px;margin:0 auto;padding:24px;box-shadow:0 0 40px rgba(0,0,0,0.8)">
@@ -4959,69 +4970,58 @@ function deleteCachedAreaRecord(id){
     }).catch(err => console.error('Documents list error:', err));
   }
 
-  // ---- Open viewer ----
+  // ---- Open viewer — uses dedicated #docViewerOverlay ----
   window.openDocViewer = function(id){
-    getDocById(id).then(doc => {
+    getDocById(id).then(function(doc){
       if(!doc){ alert('Document not found.'); return; }
+      const overlay = document.getElementById('docViewerOverlay');
+      const title   = document.getElementById('docViewerTitle');
+      const count   = document.getElementById('docViewerCount');
+      const canvas  = document.getElementById('docViewerCanvas');
+      title.textContent  = doc.name;
+      count.textContent  = '';
+      canvas.innerHTML   = '<div style="color:#fff;font-family:monospace;margin-top:40px;text-align:center;font-size:14px">Loading PDF...</div>';
+      overlay.style.display = 'flex';
+
       window.loadPdfJs(function(){
-        // Reuse the plate viewer overlay, or open our own viewer
-        const overlay = document.getElementById('plateViewerOverlay');
-        const title   = document.getElementById('plateViewerTitle');
-        const count   = document.getElementById('plateViewerCount');
-        const canvas  = document.getElementById('plateViewerCanvas');
-        const prevBtn = document.getElementById('plateViewerPrevBtn');
-        const nextBtn = document.getElementById('plateViewerNextBtn');
-        // Hide prev/next (single doc, all pages shown)
-        prevBtn.style.display = 'none';
-        nextBtn.style.display = 'none';
-        title.textContent = doc.name;
-        count.textContent = '';
-        overlay.classList.add('open');
-
-        canvas.innerHTML = '<div style="color:#fff;font-family:monospace;margin-top:40px;text-align:center;font-size:14px">Loading PDF...</div>';
-        canvas.scrollTop = 0;
-
         const base64 = doc.data.split(',')[1];
         const binary = atob(base64);
         const bytes  = new Uint8Array(binary.length);
-        for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+        for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
         pdfjsLib.getDocument({data: bytes}).promise.then(function(pdf){
           canvas.innerHTML = '';
-          count.textContent = pdf.numPages + ' page' + (pdf.numPages>1?'s':'');
+          count.textContent = pdf.numPages + ' page' + (pdf.numPages > 1 ? 's' : '');
           function renderPage(n){
             if(n > pdf.numPages) return;
             pdf.getPage(n).then(function(page){
-              const vp = page.getViewport({scale: window.devicePixelRatio >= 2 ? 2.5 : 2.0});
+              const vp  = page.getViewport({scale: window.devicePixelRatio >= 2 ? 2.5 : 2.0});
               const cvs = document.createElement('canvas');
               const ctx = cvs.getContext('2d');
-              cvs.width  = vp.width;
-              cvs.height = vp.height;
+              cvs.width        = vp.width;
+              cvs.height       = vp.height;
               cvs.style.width  = Math.min(vp.width, canvas.clientWidth - 20) + 'px';
               cvs.style.height = 'auto';
               canvas.appendChild(cvs);
-              page.render({canvasContext:ctx, viewport:vp}).promise.then(function(){
-                renderPage(n+1);
+              page.render({canvasContext: ctx, viewport: vp}).promise.then(function(){
+                renderPage(n + 1);
               });
             });
           }
           renderPage(1);
         }).catch(function(err){
-          canvas.innerHTML = '<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px;text-align:center">Error loading PDF: '+err.message+'</div>';
+          canvas.innerHTML = '<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px;text-align:center">Error loading PDF: ' + err.message + '</div>';
         });
       });
-    }).catch(err => { console.error(err); alert('Could not load document.'); });
+    }).catch(function(err){
+      console.error(err); alert('Could not load document.');
+    });
   };
 
-  // Restore prev/next when plate viewer closes
-  const _origClose = document.getElementById('plateViewerCloseBtn').onclick;
-  document.getElementById('plateViewerCloseBtn').onclick = function(){
-    document.getElementById('plateViewerPrevBtn').style.display = '';
-    document.getElementById('plateViewerNextBtn').style.display = '';
-    document.getElementById('plateViewerOverlay').classList.remove('open');
-    document.getElementById('plateViewerCanvas').innerHTML = '';
-    // reset plateViewerWpId if it exists
-    if(typeof plateViewerWpId !== 'undefined') plateViewerWpId = null;
+  // Close button for the dedicated doc viewer
+  document.getElementById('docViewerCloseBtn').onclick = function(){
+    document.getElementById('docViewerOverlay').style.display = 'none';
+    document.getElementById('docViewerCanvas').innerHTML = '';
   };
 
   // ---- Delete ----
