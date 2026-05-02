@@ -54,6 +54,37 @@ html,body{
   overflow:hidden;
 }
 
+/* ======== HOLDING ENTRY CALCULATOR ======== */
+#holdingCanvas{
+  display:block;
+  width:100%;
+  border-radius:6px;
+  border:1px solid var(--border-glow);
+  background:#060c18;
+  margin-top:8px;
+}
+.hold-result-box{
+  background:var(--bg-deep);
+  border-radius:5px;
+  padding:8px 10px;
+  font-family:var(--font-mono);
+  font-size:11px;
+  line-height:1.8;
+  margin-top:8px;
+  border-left:3px solid var(--accent-cyan);
+}
+.hold-entry-direct  { border-left-color:#00e676; }
+.hold-entry-parallel{ border-left-color:#0af; }
+.hold-entry-teardrop{ border-left-color:#ffab00; }
+.hold-entry-either  { border-left-color:#7c4dff; }
+.hold-entry-type{
+  font-family:var(--font-display);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:1.5px;
+  margin-bottom:4px;
+}
+
 /* ======== MAP ======== */
 #map{
   position:fixed;
@@ -1158,6 +1189,49 @@ textarea{resize:vertical;min-height:55px}
       <!-- List -->
       <div id="docsListContainer">
         <div id="docsEmpty" style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);text-align:center;padding:10px 0">No documents saved yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HOLDING ENTRY CALCULATOR ===== -->
+  <div class="section">
+    <div class="section-label" id="holdCalcToggle" style="cursor:pointer;user-select:none">
+      ✈️ Holding Entry Calc
+      <span id="holdCalcArrow" style="margin-left:auto;color:var(--accent-amber);font-size:11px">▶ EXPAND</span>
+    </div>
+    <div id="holdCalcPanel" style="display:none;margin-top:6px">
+
+      <!-- Turn direction selector -->
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <div id="holdTurnR" onclick="holdSetTurn('R')"
+          style="flex:1;text-align:center;border:1px solid var(--accent-cyan);border-radius:5px;padding:7px 4px;cursor:pointer;background:rgba(0,170,255,0.18);font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--accent-cyan)">
+          ↻ RIGHT TURN
+        </div>
+        <div id="holdTurnL" onclick="holdSetTurn('L')"
+          style="flex:1;text-align:center;border:1px solid var(--border-dim);border-radius:5px;padding:7px 4px;cursor:pointer;background:transparent;font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--text-dim)">
+          ↺ LEFT TURN
+        </div>
+      </div>
+
+      <!-- Inputs -->
+      <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">INBOUND COURSE (°)</label>
+      <input type="number" id="hold_inbound" min="0" max="360" placeholder="e.g. 090"
+        style="margin-bottom:6px" oninput="holdCalc()"/>
+
+      <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">AIRCRAFT HEADING (°)</label>
+      <input type="number" id="hold_heading" min="0" max="360" placeholder="e.g. 215"
+        style="margin-bottom:6px" oninput="holdCalc()"/>
+
+      <!-- Result box -->
+      <div id="hold_result" class="hold-result-box">
+        <span style="color:var(--text-dim)">Enter values above</span>
+      </div>
+
+      <!-- Canvas diagram -->
+      <canvas id="holdingCanvas" width="308" height="240"></canvas>
+
+      <div style="font-size:9px;color:var(--text-dim);font-family:var(--font-mono);margin-top:4px;text-align:center;letter-spacing:0.5px">
+        GREEN=Direct · BLUE=Parallel · ORANGE=Teardrop
       </div>
     </div>
   </div>
@@ -5171,8 +5245,443 @@ document.getElementById('docViewerCloseBtn').onclick = function(){
 })(); // end Documents IIFE
 
 /* ====================================================
-   PRINT OVERLAY — in-app iframe so Safari PWA can go back
+   HOLDING ENTRY CALCULATOR
+   Logic: ICAO 70°/110° sector method
+   - Three sectors defined relative to the outbound course
+   - Sector boundaries shift for LEFT vs RIGHT turns
+   - ±5° boundary tolerance → "Either acceptable"
 ==================================================== */
+(function(){
+
+  // ── State ──────────────────────────────────────────
+  let holdTurnDir = 'R'; // 'R' = right turns (standard), 'L' = left turns
+
+  // ── Toggle panel open/close ──────────────────────
+  document.getElementById('holdCalcToggle').onclick = function(){
+    const panel = document.getElementById('holdCalcPanel');
+    const arrow = document.getElementById('holdCalcArrow');
+    const open  = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : '';
+    arrow.textContent   = open ? '▶ EXPAND' : '▼ COLLAPSE';
+    if(!open) holdCalc(); // redraw diagram when opening
+  };
+
+  // ── Turn direction selector ───────────────────────
+  window.holdSetTurn = function(dir){
+    holdTurnDir = dir;
+    const btnR = document.getElementById('holdTurnR');
+    const btnL = document.getElementById('holdTurnL');
+    const activeStyle  = 'border:1px solid var(--accent-cyan);background:rgba(0,170,255,0.18);color:var(--accent-cyan)';
+    const inactiveStyle= 'border:1px solid var(--border-dim);background:transparent;color:var(--text-dim)';
+    btnR.style.cssText += dir==='R' ? ';'+activeStyle : ';'+inactiveStyle;
+    btnL.style.cssText += dir==='L' ? ';'+activeStyle : ';'+inactiveStyle;
+    // Re-style properly (reset both then apply)
+    btnR.setAttribute('style',
+      'flex:1;text-align:center;border-radius:5px;padding:7px 4px;cursor:pointer;font-family:var(--font-display);font-size:10px;font-weight:700;' +
+      (dir==='R'
+        ? 'border:1px solid var(--accent-cyan);background:rgba(0,170,255,0.18);color:var(--accent-cyan)'
+        : 'border:1px solid var(--border-dim);background:transparent;color:var(--text-dim)')
+    );
+    btnL.setAttribute('style',
+      'flex:1;text-align:center;border-radius:5px;padding:7px 4px;cursor:pointer;font-family:var(--font-display);font-size:10px;font-weight:700;' +
+      (dir==='L'
+        ? 'border:1px solid var(--accent-cyan);background:rgba(0,170,255,0.18);color:var(--accent-cyan)'
+        : 'border:1px solid var(--border-dim);background:transparent;color:var(--text-dim)')
+    );
+    holdCalc();
+  };
+
+  // ── Normalize angle to 0–360 ──────────────────────
+  function norm(a){ return ((a % 360) + 360) % 360; }
+
+  // ── Core logic: determine entry type ─────────────
+  // Returns { type, color, instructions }
+  // ICAO 70/110 method:
+  //   Outbound = inbound + 180
+  //   For RIGHT-turn holds:
+  //     Relative angle = (aircraft_hdg - outbound + 360) % 360
+  //     Direct  : 0–70° (±5° boundary tolerance)
+  //     Parallel: 70–180°
+  //     Teardrop: 180–360° (i.e. the 180° arc on the non-holding side)
+  //   For LEFT-turn holds: sectors mirror (relative measured the other way)
+  function determineEntry(inboundCourse, aircraftHdg, turnDir){
+    const BOUNDARY_TOL = 5; // degrees — within this = "Either acceptable"
+
+    const outbound = norm(inboundCourse + 180);
+
+    // Relative angle: how far aircraft heading is FROM the outbound course
+    // measured in the direction of the protected side
+    let rel;
+    if(turnDir === 'R'){
+      // Right-turn hold: protected side is to the RIGHT of outbound track
+      // Measure aircraft heading clockwise from outbound
+      rel = norm(aircraftHdg - outbound);
+    } else {
+      // Left-turn hold: protected side is to the LEFT of outbound track
+      // Measure aircraft heading counter-clockwise from outbound
+      rel = norm(outbound - aircraftHdg);
+    }
+
+    // Sector boundaries (degrees):
+    //   0  → 70  : Direct Entry zone
+    //   70 → 180 : Parallel Entry zone
+    //   180→ 360 : Teardrop (Offset) Entry zone
+    const D1 = 70;   // Direct/Parallel boundary
+    const D2 = 180;  // Parallel/Teardrop boundary
+
+    // Check if near a boundary (within tolerance) → "Either acceptable"
+    const nearD1 = Math.abs(rel - D1) <= BOUNDARY_TOL;
+    const nearD2 = Math.abs(rel - D2) <= BOUNDARY_TOL;
+
+    // Outbound heading for instructions (used in parallel & teardrop)
+    const outHdg = Math.round(outbound);
+    const inHdg  = Math.round(norm(inboundCourse));
+    // Teardrop intercept heading: 30° off outbound toward holding side
+    const teardropHdg = turnDir === 'R'
+      ? Math.round(norm(outbound - 30))
+      : Math.round(norm(outbound + 30));
+
+    if(nearD1 || nearD2){
+      return {
+        type:'EITHER ENTRY',
+        color:'#7c4dff',
+        cls:'hold-entry-either',
+        rel,
+        instructions: nearD1
+          ? `Near Direct/Parallel boundary.\n✓ Either Direct or Parallel entry is acceptable.`
+          : `Near Parallel/Teardrop boundary.\n✓ Either Parallel or Teardrop entry is acceptable.`
+      };
+    }
+
+    if(rel >= 0 && rel < D1){
+      // DIRECT ENTRY
+      const turnWord = turnDir === 'R' ? 'right' : 'left';
+      return {
+        type:'DIRECT ENTRY',
+        color:'#00e676',
+        cls:'hold-entry-direct',
+        rel,
+        instructions:
+          `1. Turn ${turnWord} to join inbound course (${inHdg}°).\n` +
+          `2. Cross the fix and commence hold.\n` +
+          `3. Turn ${turnWord} to outbound (${outHdg}°), fly 1 min.\n` +
+          `4. Turn ${turnWord} to re-intercept inbound course.`
+      };
+    }
+
+    if(rel >= D1 && rel < D2){
+      // PARALLEL ENTRY
+      const turnWord  = turnDir === 'R' ? 'left'  : 'right';
+      const turnWord2 = turnDir === 'R' ? 'right' : 'left';
+      return {
+        type:'PARALLEL ENTRY',
+        color:'#00aaff',
+        cls:'hold-entry-parallel',
+        rel,
+        instructions:
+          `1. Turn ${turnWord} to outbound (${outHdg}°) — parallel to inbound.\n` +
+          `2. Fly outbound for 1 min past the fix.\n` +
+          `3. Turn ${turnWord2} 180° to intercept inbound course (${inHdg}°).\n` +
+          `4. Cross fix; continue standard hold turns.`
+      };
+    }
+
+    // TEARDROP (OFFSET) ENTRY — rel 180–360
+    const turnWord  = turnDir === 'R' ? 'right' : 'left';
+    const turnWord2 = turnDir === 'R' ? 'left'  : 'right';
+    return {
+      type:'TEARDROP ENTRY',
+      color:'#ffab00',
+      cls:'hold-entry-teardrop',
+      rel,
+      instructions:
+        `1. Cross the fix, turn ${turnWord2} to heading ${teardropHdg}° (30° offset).\n` +
+        `2. Fly outbound on teardrop track for 1 min.\n` +
+        `3. Turn ${turnWord} to intercept inbound course (${inHdg}°).\n` +
+        `4. Cross fix; continue standard hold turns.`
+    };
+  }
+
+  // ── Main calc entry point ─────────────────────────
+  window.holdCalc = function(){
+    const inVal  = parseFloat(document.getElementById('hold_inbound').value);
+    const hdgVal = parseFloat(document.getElementById('hold_heading').value);
+    const resBox = document.getElementById('hold_result');
+
+    // If inputs incomplete, show placeholder diagram
+    if(isNaN(inVal) || isNaN(hdgVal)){
+      resBox.className = 'hold-result-box';
+      resBox.innerHTML = '<span style="color:var(--text-dim)">Enter values above</span>';
+      drawHoldDiagram(null, holdTurnDir);
+      return;
+    }
+
+    const result = determineEntry(norm(inVal), norm(hdgVal), holdTurnDir);
+
+    // Build result HTML
+    resBox.className = 'hold-result-box ' + result.cls;
+    resBox.innerHTML =
+      `<div class="hold-entry-type" style="color:${result.color}">${result.type}</div>` +
+      `<div style="color:var(--text-secondary);font-size:9px;margin-bottom:4px">` +
+        `Relative angle: ${Math.round(result.rel)}° | Turn: ${holdTurnDir==='R'?'↻ RIGHT':'↺ LEFT'}` +
+      `</div>` +
+      result.instructions.split('\n').map(l=>`<div>${l}</div>`).join('');
+
+    drawHoldDiagram(result, holdTurnDir, norm(inVal), norm(hdgVal));
+  };
+
+  // ── Canvas diagram ────────────────────────────────
+  // Coordinate helper: polar to canvas XY
+  // Origin at center of canvas, north=up, angle in degrees from north
+  function polar(cx,cy,r,angDeg){
+    const rad = (angDeg - 90) * Math.PI / 180;
+    return { x: cx + r*Math.cos(rad), y: cy + r*Math.sin(rad) };
+  }
+
+  function drawArrow(ctx, x1,y1, x2,y2, color, size=6){
+    const angle = Math.atan2(y2-y1, x2-x1);
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle   = color;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - size*Math.cos(angle-0.4), y2 - size*Math.sin(angle-0.4));
+    ctx.lineTo(x2 - size*Math.cos(angle+0.4), y2 - size*Math.sin(angle+0.4));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawDashedLine(ctx,x1,y1,x2,y2,color){
+    ctx.save();
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawHoldDiagram(result, turnDir, inboundCourse, aircraftHdg){
+    const canvas = document.getElementById('holdingCanvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Background grid dots
+    ctx.fillStyle = 'rgba(0,170,255,0.05)';
+    for(let x=10;x<W;x+=20) for(let y=10;y<H;y+=20){
+      ctx.beginPath(); ctx.arc(x,y,1,0,Math.PI*2); ctx.fill();
+    }
+
+    // ── Layout constants ──
+    // Fix at 55% down, horizontally centered
+    const fx = W/2, fy = H * 0.55;
+    // Holding racetrack dimensions
+    const trackLen = 72;   // half-length of straight (px)
+    const trackR   = 38;   // radius of turn ends
+    // Outbound direction is UP (north on diagram = outbound),
+    // so inbound is DOWN. We keep the diagram oriented with
+    // inbound always pointing down for clarity.
+    const inboundDirDeg  = 180; // always draw inbound pointing down→fix
+    const outboundDirDeg = 0;   // outbound pointing up
+
+    // Colors
+    const clrFix    = '#00e5ff';
+    const clrTrack  = 'rgba(100,160,220,0.35)';
+    const clrInb    = '#7899b8';
+    const clrOutb   = '#4a6a88';
+
+    // ── Draw holding racetrack ──────────────────────
+    // Right-turn hold: oval to the RIGHT of center line
+    // Left-turn hold:  oval to the LEFT
+    const side = turnDir === 'R' ? 1 : -1; // +1=right, -1=left
+
+    ctx.save();
+    ctx.strokeStyle = clrTrack;
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+
+    // Racetrack: two straights (vertical) + two semicircles
+    // Top straight: from (fx, fy-trackLen) left/right turn end
+    // Bottom straight: fix end
+    const ovX = fx + side * trackR; // oval center-X offset
+    const topY    = fy - trackLen;
+    const bottomY = fy;
+
+    // Left & right X of racetrack straights
+    const lx = ovX - side*trackR; // = fx (fix side)
+    const rx = ovX + side*trackR; // = fx + 2*side*trackR (far side)
+
+    ctx.beginPath();
+    // Top semicircle
+    if(turnDir==='R'){
+      ctx.arc(ovX, topY, trackR, Math.PI, 0, false);        // top right semicircle
+      ctx.lineTo(rx, bottomY);
+      ctx.arc(ovX, bottomY, trackR, 0, Math.PI, false);     // bottom right semicircle
+    } else {
+      ctx.arc(ovX, topY, trackR, 0, Math.PI, false);        // top left semicircle
+      ctx.lineTo(rx, bottomY);
+      ctx.arc(ovX, bottomY, trackR, Math.PI, 0, false);     // bottom left semicircle
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+
+    // ── Inbound track (dashed, below fix) ──────────
+    const inbBelow = polar(fx, fy, trackLen*0.6, 180); // below fix
+    drawDashedLine(ctx, fx, fy, inbBelow.x, inbBelow.y, clrInb);
+    drawArrow(ctx, inbBelow.x, inbBelow.y+18, fx, fy, clrInb, 5);
+
+    // Label: inbound course
+    if(inboundCourse !== undefined){
+      ctx.save();
+      ctx.fillStyle = '#7899b8';
+      ctx.font = '9px "Share Tech Mono",monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`IB ${Math.round(inboundCourse)}°`, fx + (turnDir==='R'?-22:22), fy + 30);
+      ctx.restore();
+    }
+
+    // ── Outbound track (dashed, above fix top) ──────
+    const topCenter = {x: fx, y: topY};
+    drawDashedLine(ctx, topCenter.x, topCenter.y, topCenter.x, topCenter.y - 22, clrOutb);
+
+    // ── Fix marker ──────────────────────────────────
+    ctx.save();
+    ctx.strokeStyle = clrFix;
+    ctx.lineWidth   = 1.5;
+    // Triangle (fix symbol)
+    ctx.beginPath();
+    ctx.moveTo(fx, fy-9);
+    ctx.lineTo(fx+7, fy+5);
+    ctx.lineTo(fx-7, fy+5);
+    ctx.closePath();
+    ctx.stroke();
+    // Glow dot
+    const grd = ctx.createRadialGradient(fx,fy,0,fx,fy,9);
+    grd.addColorStop(0,'rgba(0,229,255,0.3)');
+    grd.addColorStop(1,'rgba(0,229,255,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(fx,fy,9,0,Math.PI*2); ctx.fill();
+    ctx.save();
+    ctx.fillStyle='#00e5ff';
+    ctx.font='bold 8px "Orbitron",sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('FIX', fx, fy+18);
+    ctx.restore();
+    ctx.restore();
+
+    // ── Aircraft heading arrow ───────────────────────
+    if(aircraftHdg !== undefined && result){
+      // Show aircraft approaching fix from its current heading
+      // (draw arrow ending AT the fix, coming from aircraft heading direction + 180)
+      const acDist = 60;
+      const fromDir = norm(aircraftHdg + 180); // direction arrow comes FROM
+      const acStart = polar(fx, fy, acDist, fromDir + 180); // point in approach direction
+      // We rotate the "fromDir" to our diagram frame.
+      // In diagram: inbound=down(180), so we map headings relative to inbound
+      const inbRef   = inboundCourse !== undefined ? inboundCourse : 180;
+      const relToInb = norm(aircraftHdg - inbRef); // aircraft heading relative to inbound
+      // Diagram frame: inbound = 180° on screen
+      const screenAngle = norm(relToInb + 180);
+      const acFrom = polar(fx, fy, acDist, screenAngle + 180);
+
+      ctx.save();
+      ctx.setLineDash([5,3]);
+      ctx.strokeStyle = result.color;
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(acFrom.x, acFrom.y);
+      ctx.lineTo(fx, fy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Arrowhead
+      const ang = Math.atan2(fy - acFrom.y, fx - acFrom.x);
+      ctx.fillStyle = result.color;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx - 8*Math.cos(ang-0.4), fy - 8*Math.sin(ang-0.4));
+      ctx.lineTo(fx - 8*Math.cos(ang+0.4), fy - 8*Math.sin(ang+0.4));
+      ctx.closePath();
+      ctx.fill();
+      // "HDG" label near aircraft start
+      ctx.fillStyle = result.color;
+      ctx.font = '8px "Share Tech Mono",monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`HDG ${Math.round(aircraftHdg)}°`, acFrom.x, acFrom.y - 6);
+      ctx.restore();
+    }
+
+    // ── Entry type label ────────────────────────────
+    if(result){
+      ctx.save();
+      ctx.fillStyle = result.color;
+      ctx.font = 'bold 9px "Orbitron",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(result.type, W/2, 14);
+      ctx.restore();
+    }
+
+    // ── Turn direction indicator (small arc) ─────────
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,170,255,0.5)';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    if(turnDir==='R'){
+      ctx.arc(W-20, 20, 10, Math.PI, 0, false);
+      // Arrowhead for clockwise
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(0,170,255,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(W-10, 20);
+      ctx.lineTo(W-10+5, 20-4);
+      ctx.lineTo(W-10+5, 20+4);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.arc(W-20, 20, 10, 0, Math.PI, false);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(0,170,255,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(W-30, 20);
+      ctx.lineTo(W-30-5, 20-4);
+      ctx.lineTo(W-30-5, 20+4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(0,170,255,0.6)';
+    ctx.font = '7px "Share Tech Mono",monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(turnDir==='R'?'R/T':'L/T', W-20, 36);
+    ctx.restore();
+
+    // ── No-data placeholder ─────────────────────────
+    if(!result){
+      ctx.save();
+      ctx.fillStyle = 'rgba(56,80,120,0.7)';
+      ctx.font = '10px "Share Tech Mono",monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Enter inbound course & aircraft heading', W/2, H-12);
+      ctx.restore();
+    }
+  }
+
+  // Initial blank diagram draw
+  drawHoldDiagram(null, holdTurnDir);
+
+})(); // end Holding Entry Calculator
+
+
 (function(){
   // Inject the overlay HTML once
   const overlay = document.createElement('div');
