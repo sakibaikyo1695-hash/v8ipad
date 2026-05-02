@@ -90,38 +90,81 @@ body.sidebar-collapsed #sidebar{transform:translateX(100%)}
 /* ======== SIDEBAR TOGGLE BUTTON ======== */
 #sidebarToggleBtn{
   position:fixed;
-  bottom:32px;
+  bottom:50%;
+  transform:translateY(50%);
   right:var(--sidebar-w);
   z-index:600;
-  width:28px;
-  height:64px;
-  background:var(--accent-blue);
-  border:2px solid var(--accent-cyan);
-  border-left:none;
-  border-radius:0 10px 10px 0;
+  width:22px;
+  height:80px;
+  background:linear-gradient(180deg,rgba(0,170,255,0.22) 0%,rgba(0,100,200,0.32) 100%);
+  border:1px solid rgba(0,200,255,0.55);
+  border-right:none;
+  border-radius:8px 0 0 8px;
   cursor:pointer;
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
-  transition:right 0.35s cubic-bezier(0.4,0,0.2,1),background 0.2s;
-  box-shadow:4px 0 18px rgba(0,170,255,0.55);
+  gap:3px;
+  transition:right 0.35s cubic-bezier(0.4,0,0.2,1),background 0.2s,box-shadow 0.2s;
+  box-shadow:-3px 0 16px rgba(0,170,255,0.3), inset 1px 0 0 rgba(255,255,255,0.06);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  overflow:hidden;
 }
-#sidebarToggleBtn:hover{background:var(--accent-cyan)}
+#sidebarToggleBtn::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,220,255,0.6));
+}
+#sidebarToggleBtn:hover{
+  background:linear-gradient(180deg,rgba(0,200,255,0.35) 0%,rgba(0,130,220,0.45) 100%);
+  box-shadow:-4px 0 22px rgba(0,200,255,0.5), inset 1px 0 0 rgba(255,255,255,0.1);
+}
+#sidebarToggleBtn:active{
+  background:rgba(0,170,255,0.55);
+}
 body.sidebar-collapsed #sidebarToggleBtn{
   right:0;
-  background:rgba(0,170,255,0.18);
-  box-shadow:4px 0 18px rgba(0,170,255,0.35);
+  background:linear-gradient(180deg,rgba(0,170,255,0.12) 0%,rgba(0,100,200,0.18) 100%);
+  box-shadow:-3px 0 16px rgba(0,170,255,0.18);
 }
-body.sidebar-collapsed #sidebarToggleBtn:hover{background:var(--accent-blue)}
-.toggle-arrow{
-  font-size:13px;
-  color:#fff;
-  transition:transform 0.35s;
-  line-height:1;
+body.sidebar-collapsed #sidebarToggleBtn:hover{
+  background:linear-gradient(180deg,rgba(0,200,255,0.28) 0%,rgba(0,130,220,0.38) 100%);
+  box-shadow:-4px 0 20px rgba(0,200,255,0.4);
+}
+.toggle-icon{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.toggle-icon span{
+  display:block;
+  width:10px;
+  height:1.5px;
+  background:rgba(0,220,255,0.9);
+  border-radius:1px;
+  transition:width 0.2s, opacity 0.2s;
+  box-shadow:0 0 4px rgba(0,200,255,0.5);
+}
+.toggle-icon span:nth-child(2){ width:7px; opacity:0.7; }
+.toggle-icon span:nth-child(3){ width:4px; opacity:0.45; }
+body.sidebar-collapsed .toggle-icon{ transform:scaleX(-1); }
+.toggle-label{
+  font-family:'Courier New',monospace;
+  font-size:7px;
+  letter-spacing:1.5px;
+  color:rgba(0,220,255,0.7);
   writing-mode:vertical-rl;
-  letter-spacing:0;
-  font-weight:900;
-  text-shadow:0 0 6px rgba(0,0,0,0.5);
+  text-orientation:mixed;
+  text-transform:uppercase;
+  margin-top:2px;
+  user-select:none;
+  line-height:1;
 }
 body.sidebar-collapsed .toggle-arrow{transform:rotate(180deg)}
 
@@ -865,8 +908,11 @@ textarea{resize:vertical;min-height:55px}
 </div>
 
 <!-- SIDEBAR COLLAPSE TOGGLE -->
-<button id="sidebarToggleBtn" title="Toggle panel">
-  <span class="toggle-arrow">◀</span>
+<button id="sidebarToggleBtn" title="Toggle sidebar panel">
+  <div class="toggle-icon">
+    <span></span><span></span><span></span>
+  </div>
+  <span class="toggle-label">NAV</span>
 </button>
 
 <!-- SIDEBAR -->
@@ -4985,11 +5031,16 @@ function deleteCachedAreaRecord(id){
         // Use an <iframe> — Safari's native PDF renderer handles it outside page memory
         canvas.innerHTML = '';
         var iframe = document.createElement('iframe');
-        iframe.src   = url;
-        // position:absolute fill so Safari's native PDF scroller works correctly
-        iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;display:block;';
-        canvas.style.cssText = 'flex:1;overflow:hidden;background:#fff;padding:0;position:relative;';
+        iframe.src = url;
+        iframe.setAttribute('allowfullscreen', '');
+        // Full-bleed the overlay: vw/vh ignores any flex sizing quirks in Safari
+        iframe.style.cssText = 'width:100vw;height:100vh;border:none;display:block;flex-shrink:0;';
+        canvas.style.cssText = 'flex:1;overflow:hidden;background:#000;padding:0;display:block;';
         canvas.appendChild(iframe);
+
+        // Allow pinch-zoom so the user can adjust PDF zoom freely
+        var vp = document.querySelector('meta[name="viewport"]');
+        if(vp){ overlay._prevViewport = vp.content; vp.content = 'width=device-width,initial-scale=1,user-scalable=yes'; }
 
         // Store URL on overlay so it can be revoked on close (not on a timer)
         overlay._docBlobUrl = url;
@@ -5010,6 +5061,9 @@ function deleteCachedAreaRecord(id){
     canvas.innerHTML = '';
     // Restore default canvas styles
     canvas.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;background:#333;padding:10px;display:flex;flex-direction:column;align-items:center;gap:10px;-webkit-overflow-scrolling:touch;';
+    // Restore viewport zoom lock
+    var vp = document.querySelector('meta[name="viewport"]');
+    if(vp && overlay._prevViewport){ vp.content = overlay._prevViewport; overlay._prevViewport = null; }
     // Revoke the blob URL now that we are done with it
     if(overlay._docBlobUrl){ URL.revokeObjectURL(overlay._docBlobUrl); overlay._docBlobUrl = null; }
   };
