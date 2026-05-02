@@ -96,8 +96,8 @@ body.sidebar-collapsed #sidebar{transform:translateX(100%)}
   z-index:600;
   width:22px;
   height:80px;
-  background:linear-gradient(180deg,rgba(0,170,255,0.22) 0%,rgba(0,100,200,0.32) 100%);
-  border:1px solid rgba(0,200,255,0.55);
+  background:linear-gradient(180deg,rgba(4,12,30,0.88) 0%,rgba(2,8,22,0.92) 100%);
+  border:1px solid rgba(0,200,255,0.75);
   border-right:none;
   border-radius:8px 0 0 8px;
   cursor:pointer;
@@ -120,7 +120,7 @@ body.sidebar-collapsed #sidebar{transform:translateX(100%)}
   background:linear-gradient(90deg,transparent,rgba(0,220,255,0.6));
 }
 #sidebarToggleBtn:hover{
-  background:linear-gradient(180deg,rgba(0,200,255,0.35) 0%,rgba(0,130,220,0.45) 100%);
+  background:linear-gradient(180deg,rgba(0,60,120,0.92) 0%,rgba(0,40,100,0.95) 100%);
   box-shadow:-4px 0 22px rgba(0,200,255,0.5), inset 1px 0 0 rgba(255,255,255,0.1);
 }
 #sidebarToggleBtn:active{
@@ -128,11 +128,11 @@ body.sidebar-collapsed #sidebar{transform:translateX(100%)}
 }
 body.sidebar-collapsed #sidebarToggleBtn{
   right:0;
-  background:linear-gradient(180deg,rgba(0,170,255,0.12) 0%,rgba(0,100,200,0.18) 100%);
-  box-shadow:-3px 0 16px rgba(0,170,255,0.18);
+  background:linear-gradient(180deg,rgba(4,12,30,0.88) 0%,rgba(2,8,22,0.92) 100%);
+  box-shadow:-3px 0 16px rgba(0,170,255,0.3);
 }
 body.sidebar-collapsed #sidebarToggleBtn:hover{
-  background:linear-gradient(180deg,rgba(0,200,255,0.28) 0%,rgba(0,130,220,0.38) 100%);
+  background:linear-gradient(180deg,rgba(0,60,120,0.92) 0%,rgba(0,40,100,0.95) 100%);
   box-shadow:-4px 0 20px rgba(0,200,255,0.4);
 }
 .toggle-icon{
@@ -5034,13 +5034,12 @@ function deleteCachedAreaRecord(id){
         iframe.src = url;
         iframe.setAttribute('allowfullscreen', '');
         // Full-bleed the overlay: vw/vh ignores any flex sizing quirks in Safari
-        iframe.style.cssText = 'width:100vw;height:100vh;border:none;display:block;flex-shrink:0;';
-        canvas.style.cssText = 'flex:1;overflow:hidden;background:#000;padding:0;display:block;';
+        iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+        canvas.style.cssText = 'flex:1;overflow:hidden;background:#000;padding:0;display:flex;flex-direction:column;';
         canvas.appendChild(iframe);
 
         // Allow pinch-zoom so the user can adjust PDF zoom freely
-        var vp = document.querySelector('meta[name="viewport"]');
-        if(vp){ overlay._prevViewport = vp.content; vp.content = 'width=device-width,initial-scale=1,user-scalable=yes'; }
+        
 
         // Store URL on overlay so it can be revoked on close (not on a timer)
         overlay._docBlobUrl = url;
@@ -5060,10 +5059,9 @@ function deleteCachedAreaRecord(id){
     overlay.style.display = 'none';
     canvas.innerHTML = '';
     // Restore default canvas styles
-    canvas.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;background:#333;padding:10px;display:flex;flex-direction:column;align-items:center;gap:10px;-webkit-overflow-scrolling:touch;';
+    canvas.style.cssText = 'flex:1;overflow:hidden;background:#000;padding:0;display:flex;flex-direction:column;';
     // Restore viewport zoom lock
-    var vp = document.querySelector('meta[name="viewport"]');
-    if(vp && overlay._prevViewport){ vp.content = overlay._prevViewport; overlay._prevViewport = null; }
+   
     // Revoke the blob URL now that we are done with it
     if(overlay._docBlobUrl){ URL.revokeObjectURL(overlay._docBlobUrl); overlay._docBlobUrl = null; }
   };
