@@ -1214,7 +1214,7 @@ textarea{resize:vertical;min-height:55px}
       </div>
 
       <!-- Inputs -->
-      <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">INBOUND COURSE (°)</label>
+<label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">OUTBOUND COURSE (°)</label>
       <input type="number" id="hold_inbound" min="0" max="360" placeholder="e.g. 090"
         style="margin-bottom:6px" oninput="holdCalc()"/>
 
@@ -5311,34 +5311,31 @@ document.getElementById('docViewerCloseBtn').onclick = function(){
   //
   //   ±5° near sector boundaries → "Either entry acceptable"
   //
-function determineEntry(inboundCourse, aircraftHdg, turnDir){
+function determineEntry(outboundCourse, aircraftHdg, turnDir){
     const BOUNDARY_TOL = 5;
 
-    const outbound = norm(inboundCourse + 180);
+    // rel = where the aircraft is coming FROM, relative to the outbound course
+    // Formula: norm( (aircraftHdg + 180) - outboundCourse )
+    // This tells us which sector of the hold the aircraft is arriving from.
+    //
+    // Sectors (right-turn hold, measured from outbound):
+    //   0°   – 110° : DIRECT
+    //   110° – 180° : TEARDROP
+    //   180° – 360° : PARALLEL
 
-    // Measure relative angle FROM the outbound course to the aircraft heading.
-    // Right-turn hold: clockwise from outbound.
-    // Left-turn hold:  counter-clockwise from outbound.
-    const rel = turnDir === 'R'
-      ? norm(aircraftHdg - outbound)
-      : norm(outbound - aircraftHdg);
+    const rel = norm( (aircraftHdg + 180) - outboundCourse );
 
-    // ICAO sectors measured from outbound course:
-    //   0°   – 110° : DIRECT entry
-    //   110° – 180° : TEARDROP entry
-    //   180° – 360° : PARALLEL entry
+    const B_DIRECT_TEARDROP   = 110;
+    const B_TEARDROP_PARALLEL = 180;
 
-    const B_DIRECT_TEARDROP  = 110;   // 0–110°   = Direct
-    const B_TEARDROP_PARALLEL = 180;  // 110–180° = Teardrop, 180–360° = Parallel
+    const nearB1 = Math.abs(rel - B_DIRECT_TEARDROP)   <= BOUNDARY_TOL;
+    const nearB2 = Math.abs(rel - B_TEARDROP_PARALLEL)  <= BOUNDARY_TOL;
 
-    const nearB1 = Math.abs(rel - B_DIRECT_TEARDROP)  <= BOUNDARY_TOL;
-    const nearB2 = Math.abs(rel - B_TEARDROP_PARALLEL) <= BOUNDARY_TOL;
-
-    const outHdg      = Math.round(outbound);
-    const inHdg       = Math.round(norm(inboundCourse));
+    const outHdg      = Math.round(norm(outboundCourse));
+    const inHdg       = Math.round(norm(outboundCourse + 180));
     const teardropHdg = turnDir === 'R'
-      ? Math.round(norm(outbound - 30))
-      : Math.round(norm(outbound + 30));
+      ? Math.round(norm(outboundCourse - 30))
+      : Math.round(norm(outboundCourse + 30));
 
     if(nearB1 || nearB2){
       return {
@@ -5353,7 +5350,6 @@ function determineEntry(inboundCourse, aircraftHdg, turnDir){
     }
 
     if(rel < B_DIRECT_TEARDROP){
-      // DIRECT ENTRY — aircraft roughly aligned with or near outbound
       const turnWord = turnDir === 'R' ? 'right' : 'left';
       return {
         type:'DIRECT ENTRY',
@@ -5369,7 +5365,6 @@ function determineEntry(inboundCourse, aircraftHdg, turnDir){
     }
 
     if(rel < B_TEARDROP_PARALLEL){
-      // TEARDROP ENTRY — aircraft on non-holding side, needs offset track
       const turnToTeardrop = turnDir === 'R' ? 'right' : 'left';
       return {
         type:'TEARDROP ENTRY',
@@ -5384,7 +5379,6 @@ function determineEntry(inboundCourse, aircraftHdg, turnDir){
       };
     }
 
-    // PARALLEL ENTRY — aircraft on holding side, near inbound track
     const turnToOutbound = turnDir === 'R' ? 'left'  : 'right';
     const turnToInbound  = turnDir === 'R' ? 'right' : 'left';
     return {
@@ -5421,7 +5415,7 @@ function determineEntry(inboundCourse, aircraftHdg, turnDir){
     resBox.innerHTML =
       `<div class="hold-entry-type" style="color:${result.color}">${result.type}</div>` +
       `<div style="color:var(--text-secondary);font-size:9px;margin-bottom:4px">` +
-        `Inbound: ${Math.round(norm(inVal))}° | HDG: ${Math.round(norm(hdgVal))}° | ` +
+        `Outbound: ${Math.round(norm(inVal))}° | HDG: ${Math.round(norm(hdgVal))}° | ` +
         `Rel angle: ${Math.round(result.rel)}° | Turn: ${holdTurnDir==='R'?'↻ RIGHT':'↺ LEFT'}` +
       `</div>` +
       result.instructions.split('\n').map(l=>`<div>${l}</div>`).join('');
