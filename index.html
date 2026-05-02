@@ -4986,13 +4986,13 @@ function deleteCachedAreaRecord(id){
         canvas.innerHTML = '';
         var iframe = document.createElement('iframe');
         iframe.src   = url;
-        iframe.style.cssText = 'width:100%;height:100%;border:none;flex:1;display:block;';
-        canvas.style.padding = '0';
-        canvas.style.background = '#fff';
+        // position:absolute fill so Safari's native PDF scroller works correctly
+        iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;display:block;';
+        canvas.style.cssText = 'flex:1;overflow:hidden;background:#fff;padding:0;position:relative;';
         canvas.appendChild(iframe);
 
-        // Revoke the object URL after a delay to free memory
-        setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+        // Store URL on overlay so it can be revoked on close (not on a timer)
+        overlay._docBlobUrl = url;
 
       } catch(e) {
         canvas.innerHTML = '<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px;text-align:center">Could not open PDF: ' + e.message + '</div>';
@@ -5007,9 +5007,11 @@ function deleteCachedAreaRecord(id){
     var overlay = document.getElementById('docViewerOverlay');
     var canvas  = document.getElementById('docViewerCanvas');
     overlay.style.display = 'none';
-    canvas.innerHTML   = '';
-    canvas.style.padding    = '10px';
-    canvas.style.background = '#333';
+    canvas.innerHTML = '';
+    // Restore default canvas styles
+    canvas.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;background:#333;padding:10px;display:flex;flex-direction:column;align-items:center;gap:10px;-webkit-overflow-scrolling:touch;';
+    // Revoke the blob URL now that we are done with it
+    if(overlay._docBlobUrl){ URL.revokeObjectURL(overlay._docBlobUrl); overlay._docBlobUrl = null; }
   };
 
   // ---- Delete ----
@@ -5032,8 +5034,11 @@ function deleteCachedAreaRecord(id){
     if(!files.length) return;
     _pendingFiles = files;
     const nameInput = document.getElementById('docsNameInput');
-    // Pre-fill name from filename (strip .pdf extension)
+    // Pre-fill name from first filename (strip .pdf extension)
     nameInput.value = files[0].name.replace(/\.pdf$/i,'');
+    // Update label to show count if multiple selected
+    const nameLabel = document.querySelector('#docsNameRow .c-label');
+    if(nameLabel) nameLabel.textContent = files.length > 1 ? 'BASE NAME (' + files.length + ' FILES — will be numbered)' : 'DOCUMENT NAME';
     document.getElementById('docsNameRow').style.display = '';
     document.getElementById('docsProgress').style.display = 'none';
     nameInput.focus();
@@ -5049,10 +5054,12 @@ function deleteCachedAreaRecord(id){
     progress.textContent = 'Saving...';
 
     // Save all selected files sequentially
+    const total = _pendingFiles.length;
     let chain = Promise.resolve();
     _pendingFiles.forEach((file, idx) => {
-      const docName = _pendingFiles.length > 1 ? name + (idx > 0 ? ' ('+(idx+1)+')' : '') : name;
+      const docName = total > 1 ? name + (idx > 0 ? ' (' + (idx + 1) + ')' : '') : name;
       chain = chain.then(() => new Promise((resolve, reject) => {
+        progress.textContent = total > 1 ? 'Saving ' + (idx + 1) + ' of ' + total + '...' : 'Saving...';
         const reader = new FileReader();
         reader.onload = function(ev){
           saveDoc(docName, ev.target.result, file.size)
