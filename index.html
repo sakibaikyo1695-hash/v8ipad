@@ -93,30 +93,35 @@ body.sidebar-collapsed #sidebar{transform:translateX(100%)}
   left:0;
   z-index:600;
   width:28px;
-  height:52px;
-  background:var(--bg-panel);
-  border:1px solid var(--border-glow);
+  height:64px;
+  background:var(--accent-blue);
+  border:2px solid var(--accent-cyan);
   border-left:none;
-  border-radius:0 8px 8px 0;
+  border-radius:0 10px 10px 0;
   cursor:pointer;
   display:flex;
   align-items:center;
   justify-content:center;
   transition:left 0.35s cubic-bezier(0.4,0,0.2,1),background 0.2s;
-  box-shadow:3px 0 12px rgba(0,0,0,0.4);
+  box-shadow:4px 0 18px rgba(0,170,255,0.55);
 }
-#sidebarToggleBtn:hover{background:var(--bg-elevated)}
+#sidebarToggleBtn:hover{background:var(--accent-cyan)}
 body.sidebar-collapsed #sidebarToggleBtn{
   left:0;
-  border-radius:0 8px 8px 0;
+  background:rgba(0,170,255,0.18);
+  border-radius:0 10px 10px 0;
+  box-shadow:4px 0 18px rgba(0,170,255,0.35);
 }
+body.sidebar-collapsed #sidebarToggleBtn:hover{background:var(--accent-blue)}
 .toggle-arrow{
   font-size:13px;
-  color:var(--accent-cyan);
+  color:#fff;
   transition:transform 0.35s;
   line-height:1;
   writing-mode:vertical-rl;
   letter-spacing:0;
+  font-weight:900;
+  text-shadow:0 0 6px rgba(0,0,0,0.5);
 }
 body.sidebar-collapsed .toggle-arrow{transform:rotate(180deg)}
 
@@ -387,32 +392,36 @@ textarea{resize:vertical;min-height:55px}
 }
 #areaVisEmpty{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);text-align:center;padding:10px 0}
 
-/* ======== RESPONSIVE IPAD ======== */
+/* ======== RESPONSIVE IPAD — sidebar stays RIGHT, same as desktop ======== */
 @media (max-width:1024px){
-  :root{--sidebar-w:100%}
-  #map{right:0;bottom:46%;top:0;transition:bottom 0.35s cubic-bezier(0.4,0,0.2,1),right 0s}
-  body.sidebar-collapsed #map{bottom:0}
+  :root{--sidebar-w:340px}
+  /* Map: always fills left of sidebar, same as desktop */
+  #map{right:var(--sidebar-w);bottom:0;top:0;
+    transition:right 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  body.sidebar-collapsed #map{right:0}
+  /* Sidebar: right-anchored column */
   #sidebar{
-    position:fixed;left:0;right:0;bottom:0;top:auto;
-    height:46%;width:100%;transform:translateY(0);
-    border-left:none;border-top:2px solid var(--border-glow);
+    position:fixed;right:0;top:0;bottom:0;left:auto;
+    width:var(--sidebar-w);height:100%;
+    transform:translateX(0);
+    border-left:1px solid var(--border-glow);border-top:none;
     transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);
   }
-  body.sidebar-collapsed #sidebar{transform:translateY(100%)}
+  body.sidebar-collapsed #sidebar{transform:translateX(100%)}
+  /* Toggle button: left edge of sidebar, vertical tab */
   #sidebarToggleBtn{
-    top:auto;
-    bottom:calc(46% - 1px);
-    right:10px;
-    left:auto;
-    width:64px;height:22px;
-    border-radius:8px 8px 0 0;
-    border-bottom:none;border-right:1px solid var(--border-glow);
-    transform:none;
-    writing-mode:horizontal-tb;
+    bottom:32px;top:auto;
+    left:0;right:auto;
+    width:28px;height:52px;
+    border-radius:0 8px 8px 0;
+    border-bottom:1px solid var(--border-glow);
+    border-right:none;
+    writing-mode:vertical-rl;
   }
-  body.sidebar-collapsed #sidebarToggleBtn{bottom:0}
-  .toggle-arrow{writing-mode:horizontal-tb;transform:rotate(90deg)}
-  body.sidebar-collapsed .toggle-arrow{transform:rotate(-90deg)}
+  body.sidebar-collapsed #sidebarToggleBtn{left:0}
+  .toggle-arrow{writing-mode:vertical-rl;transform:none}
+  body.sidebar-collapsed .toggle-arrow{transform:rotate(180deg)}
 }
 
 /* ======== PASSWORD SCREEN ======== */
@@ -765,11 +774,12 @@ textarea{resize:vertical;min-height:55px}
       <p>Tap <b style="color:var(--text-bright)">🖨️ PRINT BRIEF</b>. Fill in mission details, weather, NOTAM, and special notes. The current route is automatically included in the briefing. Tap 🖨️ PRINT / SAVE PDF to open the print dialog.</p>
 
       <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--accent-amber);margin:14px 0 6px;border-bottom:1px solid var(--border-dim);padding-bottom:4px">17. TIPS FOR iPAD USE</div>
-      <p>• The sidebar docks at the bottom in portrait/landscape iPad mode — tap the handle to collapse/expand it.<br>
+      <p>• The sidebar docks on the <b style="color:var(--text-bright)">right side</b> in both portrait and landscape — tap the glowing blue tab to collapse/expand it for full-screen map.<br>
       • PDF approach plates show all pages when opened in the viewer.<br>
       • Pre-cache tiles before flight for offline map use.<br>
       • Add this app to your iPad Home Screen for a full-screen PWA experience.<br>
-      • Use Safari on iPad for best GPS and PDF compatibility.</p>
+      • Use Safari on iPad for best GPS and PDF compatibility.<br>
+      • When printing Pilot Card or Pre-Flight Briefing, use the in-app <b style="color:var(--text-bright)">◀ BACK</b> button to return — do not close the app.</p>
 
     </div>
   </div>
@@ -3788,10 +3798,13 @@ document.getElementById('importBtn').onclick=()=>{
     const towMom = zfwMom + mFuelTO;
     const towArm = towWt>0 ? towMom/towWt : 0;
 
-    // Burn off — use flight time from fuel calc
+    // Burn off — use average arm between TO fuel and landing fuel (more accurate than fixed arm)
     const d = window._bfData;
     const burnOff = Math.min(fuelTO, ac.STARTUP_FUEL + (d.totalTime||0)*ac.FUEL_CONS);
-    const mBurn = burnOff * BURN_ARM;
+    const fuelAtLand = Math.max(0, fuelTO - burnOff);
+    const FUEL_ARM_LD_actual = isSP ? spFuelArm(fuelAtLand) : AW109E.FUEL_ARM_LD;
+    const avgBurnArm = (FUEL_ARM_TO + FUEL_ARM_LD_actual) / 2;
+    const mBurn = burnOff * avgBurnArm;
     const ldwWt = towWt - burnOff;
     const ldwMom = towMom - mBurn;
     const ldwArm = ldwWt>0 ? ldwMom/ldwWt : 0;
@@ -3855,29 +3868,34 @@ document.getElementById('importBtn').onclick=()=>{
         ${cgRow('ZFW',zfwWt,zfwArm,zfwMom,true)}
         ${cgRow('Take-Off Fuel',fuelTO,FUEL_ARM_TO,mFuelTO)}
         ${cgRow('TOW',towWt,towArm,towMom,true)}
-        ${cgRow('Burn-Off',burnOff,BURN_ARM,mBurn)}
+        ${cgRow('Burn-Off',burnOff,Math.round(avgBurnArm),mBurn)}
         ${cgRow('LDW',ldwWt,ldwArm,ldwMom,true)}
         </tbody>
       </table>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:6px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px">
         <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:5px 8px">
           <div style="font-size:9px;color:var(--text-dim)">TO CG ARM</div>
           <div style="font-weight:700;color:${toOK?'var(--accent-green)':'var(--accent-red)'}">${towArm.toFixed(0)} mm</div>
-          <div style="font-size:9px;color:${toOK?'var(--accent-green)':'var(--accent-red)'}">${toOK?'✓ IN ENV':'✗ OUT'}</div>
+          <div style="font-size:9px;color:${toOK?'var(--accent-green)':'var(--accent-red)'}">${toOK?'✓ IN ENVELOPE':'✗ OUTSIDE ENVELOPE'}</div>
         </div>
         <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:5px 8px">
           <div style="font-size:9px;color:var(--text-dim)">LD CG ARM</div>
           <div style="font-weight:700;color:${ldOK?'var(--accent-green)':'var(--accent-red)'}">${ldwArm.toFixed(0)} mm</div>
-          <div style="font-size:9px;color:${ldOK?'var(--accent-green)':'var(--accent-red)'}">${ldOK?'✓ IN ENV':'✗ OUT'}</div>
-        </div>
-        <div style="border:2px solid ${verdictColor};border-radius:4px;padding:5px 8px;display:flex;align-items:center;justify-content:center">
-          <div style="font-family:var(--font-display);font-size:16px;font-weight:900;color:${verdictColor};letter-spacing:3px">${verdict}</div>
+          <div style="font-size:9px;color:${ldOK?'var(--accent-green)':'var(--accent-red)'}">${ldOK?'✓ IN ENVELOPE':'✗ OUTSIDE ENVELOPE'}</div>
         </div>
       </div>
-      <div style="font-size:9px;color:var(--text-dim)">
-        ${overweight?'⚠ OVERWEIGHT |':''} CG Envelope: TO ${toOK?'OK':'OUTSIDE'} | LD ${ldOK?'OK':'OUTSIDE'}
-        ${paxMismatch?`<br><span style="color:var(--accent-red);font-weight:700">⚠ PAX weight mismatch: Step 2 = ${step2PaxTotal} kg, CG seats = ${cgPaxTotal} kg</span>`:''}
-        ${!fuelOK?`<br><span style="color:var(--accent-amber)">Fuel: ${d.fuelTaken>0?(d.fuelTaken>=d.fuelRequired?'✓ Sufficient':'✗ Insufficient — see Step 3'):'not entered — see Step 3'}</span>`:''}
+      <div style="border:2px solid ${verdictColor};border-radius:6px;padding:8px 12px;background:${verdict==='GO'?'rgba(0,230,118,0.07)':'rgba(255,23,68,0.07)'}">
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:900;color:${verdictColor};letter-spacing:4px;text-align:center">${verdict}</div>
+        ${verdict==='NO GO'?`
+        <div style="margin-top:6px;font-size:10px;color:var(--accent-red);font-family:var(--font-mono);line-height:1.8">
+          <div style="font-size:9px;color:var(--text-dim);margin-bottom:2px">REASON(S):</div>
+          ${overweight?'<div>⚠ OVERWEIGHT — TOW '+fmt1(towWt)+' kg exceeds max '+ac.MAX_AUW+' kg</div>':''}
+          ${!toOK?'<div>⚠ TO CG OUT OF ENVELOPE — arm '+towArm.toFixed(0)+' mm at '+fmt1(towWt)+' kg</div>':''}
+          ${!ldOK?'<div>⚠ LD CG OUT OF ENVELOPE — arm '+ldwArm.toFixed(0)+' mm at '+fmt1(ldwWt)+' kg</div>':''}
+          ${!fuelOK&&d.fuelTaken>0?'<div>⚠ FUEL INSUFFICIENT — need '+d.fuelRequired+' kg, taken '+d.fuelTaken+' kg</div>':''}
+          ${!fuelOK&&!(d.fuelTaken>0)?'<div style="color:var(--accent-amber)">⚠ FUEL NOT ENTERED — go to Step 3</div>':''}
+        </div>`:'<div style="margin-top:4px;font-size:10px;color:var(--accent-green);text-align:center;font-family:var(--font-mono)">Weight ✓ · TO CG ✓ · LD CG ✓</div>'}
+        ${paxMismatch?`<div style="margin-top:4px;font-size:9px;color:var(--accent-amber);font-family:var(--font-mono)">⚠ PAX mismatch: Step 2 = ${step2PaxTotal} kg | CG seats = ${cgPaxTotal} kg</div>`:''}
       </div>`;
   };
 
@@ -4152,9 +4170,7 @@ document.getElementById('importBtn').onclick=()=>{
     <script>window.onload=function(){window.print();};<\/script>
     </body></html>`;
 
-    const w=window.open('','_blank','width=740,height=620');
-    w.document.write(pilotHTML);
-    w.document.close();
+    openPrintOverlay(pilotHTML);
   }
 
   document.getElementById('doPilotCardBtn').onclick=function(){
@@ -4381,9 +4397,7 @@ document.getElementById('importBtn').onclick=()=>{
     <script>window.onload=function(){window.print();}<\/script>
     </body></html>`;
 
-    const w=window.open('','_blank','width=960,height=750');
-    w.document.write(briefHTML);
-    w.document.close();
+    openPrintOverlay(briefHTML);
   };
 
     /* ================================================
@@ -4791,6 +4805,55 @@ function deleteCachedAreaRecord(id){
   })(); // end pre-flight cache IIFE
   loadLocal();
 }
+
+/* ====================================================
+   PRINT OVERLAY — in-app iframe so Safari PWA can go back
+==================================================== */
+(function(){
+  // Inject the overlay HTML once
+  const overlay = document.createElement('div');
+  overlay.id = 'printOverlay';
+  overlay.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:99000;display:none;flex-direction:column;background:#1a1a1a';
+  overlay.innerHTML = `
+    <div id="printOverlayBar" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#111;border-bottom:2px solid #0af;flex-shrink:0">
+      <button id="printOverlayBack" style="
+        background:#cc0000;color:#fff;border:none;border-radius:7px;
+        padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;
+        letter-spacing:1px;font-family:Arial,sans-serif;
+        box-shadow:0 0 10px rgba(255,0,0,0.4)">
+        ◀ BACK
+      </button>
+      <button id="printOverlayPrint" style="
+        background:#0055cc;color:#fff;border:none;border-radius:7px;
+        padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;
+        letter-spacing:1px;font-family:Arial,sans-serif;
+        box-shadow:0 0 10px rgba(0,85,204,0.4)">
+        🖨 PRINT / SAVE PDF
+      </button>
+      <span style="color:#7899b8;font-size:11px;font-family:monospace">Tap PRINT to save PDF · BACK to return to app</span>
+    </div>
+    <iframe id="printOverlayFrame" style="flex:1;border:none;background:#fff"></iframe>`;
+  document.body.appendChild(overlay);
+
+  document.getElementById('printOverlayBack').onclick = function(){
+    const frame = document.getElementById('printOverlayFrame');
+    frame.srcdoc = '';
+    overlay.style.display = 'none';
+  };
+  document.getElementById('printOverlayPrint').onclick = function(){
+    const frame = document.getElementById('printOverlayFrame');
+    frame.contentWindow && frame.contentWindow.print();
+  };
+
+  window.openPrintOverlay = function(html){
+    // Strip the auto-print onload script — user presses the PRINT button
+    const safeHtml = html.replace(/<script>window\.onload=function\(\)\{window\.print\(\);\};<\/script>/g,'')
+                         .replace(/<script>window\.onload=function\(\)\{window\.print\(\)\}<\/script>/g,'');
+    const frame = document.getElementById('printOverlayFrame');
+    frame.srcdoc = safeHtml;
+    overlay.style.display = 'flex';
+  };
+})();
 
 /* ====================================================
    SERVICE WORKER
