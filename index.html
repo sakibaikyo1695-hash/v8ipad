@@ -52,25 +52,23 @@ html,body{
   overscroll-behavior:none;
 }
 
-/* ======== MAP — NO FILTER, CLEAN VIEW ======== */
+/* ======== MAP ======== */
 #map{
-  position:absolute;
+  position:fixed;
   top:0;bottom:0;left:0;
   right:var(--sidebar-w);
   background:#0a0a0a;
   transition:right 0.35s cubic-bezier(0.4,0,0.2,1);
 }
-    .leaflet-control-attribution { display: none !important; }
-/* No tile filter at all — clear map */
+.leaflet-control-attribution{display:none !important}
 .leaflet-container{background:#0a0a0a}
 
-/* When sidebar is collapsed, map fills full width */
 body.sidebar-collapsed #map{right:0}
-body.sidebar-collapsed #sidebar{transform:translateX(100%)}
 
 /* ======== SIDEBAR ======== */
 #sidebar{
-  position:absolute;right:0;top:0;bottom:0;
+  position:fixed;
+  right:0;top:0;bottom:0;
   width:var(--sidebar-w);
   background:var(--bg-panel);
   border-left:1px solid var(--border-dim);
@@ -82,15 +80,16 @@ body.sidebar-collapsed #sidebar{transform:translateX(100%)}
   transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);
   z-index:500;
 }
+body.sidebar-collapsed #sidebar{transform:translateX(100%)}
 #sidebar::-webkit-scrollbar{width:4px}
 #sidebar::-webkit-scrollbar-track{background:transparent}
 #sidebar::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:2px}
 
 /* ======== SIDEBAR TOGGLE BUTTON ======== */
 #sidebarToggleBtn{
-  position:absolute;
+  position:fixed;
   bottom:32px;
-  left:0;
+  right:var(--sidebar-w);
   z-index:600;
   width:28px;
   height:64px;
@@ -102,14 +101,13 @@ body.sidebar-collapsed #sidebar{transform:translateX(100%)}
   display:flex;
   align-items:center;
   justify-content:center;
-  transition:left 0.35s cubic-bezier(0.4,0,0.2,1),background 0.2s;
+  transition:right 0.35s cubic-bezier(0.4,0,0.2,1),background 0.2s;
   box-shadow:4px 0 18px rgba(0,170,255,0.55);
 }
 #sidebarToggleBtn:hover{background:var(--accent-cyan)}
 body.sidebar-collapsed #sidebarToggleBtn{
-  left:0;
+  right:0;
   background:rgba(0,170,255,0.18);
-  border-radius:0 10px 10px 0;
   box-shadow:4px 0 18px rgba(0,170,255,0.35);
 }
 body.sidebar-collapsed #sidebarToggleBtn:hover{background:var(--accent-blue)}
@@ -392,36 +390,9 @@ textarea{resize:vertical;min-height:55px}
 }
 #areaVisEmpty{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);text-align:center;padding:10px 0}
 
-/* ======== RESPONSIVE IPAD — sidebar stays RIGHT, same as desktop ======== */
+/* ======== RESPONSIVE IPAD — fixed layout works identically, no overrides needed ======== */
 @media (max-width:1024px){
-  :root{--sidebar-w:340px}
-  /* Map: always fills left of sidebar, same as desktop */
-  #map{right:var(--sidebar-w);bottom:0;top:0;
-    transition:right 0.35s cubic-bezier(0.4,0,0.2,1);
-  }
-  body.sidebar-collapsed #map{right:0}
-  /* Sidebar: right-anchored column */
-  #sidebar{
-    position:fixed;right:0;top:0;bottom:0;left:auto;
-    width:var(--sidebar-w);height:100%;
-    transform:translateX(0);
-    border-left:1px solid var(--border-glow);border-top:none;
-    transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);
-  }
-  body.sidebar-collapsed #sidebar{transform:translateX(100%)}
-  /* Toggle button: left edge of sidebar, vertical tab */
-  #sidebarToggleBtn{
-    bottom:32px;top:auto;
-    left:0;right:auto;
-    width:28px;height:52px;
-    border-radius:0 8px 8px 0;
-    border-bottom:1px solid var(--border-glow);
-    border-right:none;
-    writing-mode:vertical-rl;
-  }
-  body.sidebar-collapsed #sidebarToggleBtn{left:0}
-  .toggle-arrow{writing-mode:vertical-rl;transform:none}
-  body.sidebar-collapsed .toggle-arrow{transform:rotate(180deg)}
+  /* Sidebar width can be slightly narrower on phones if needed — iPad keeps 340px fine */
 }
 
 /* ======== PASSWORD SCREEN ======== */
@@ -732,13 +703,13 @@ textarea{resize:vertical;min-height:55px}
 </div>
 
 <!-- DOCUMENTS VIEWER — dedicated overlay, independent of plate viewer -->
-<div id="docViewerOverlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:#000;z-index:20001;display:none;flex-direction:column;">
+<div id="docViewerOverlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:#000;z-index:20001;flex-direction:column;display:none;">
   <div style="display:flex;align-items:center;gap:8px;background:var(--bg-panel);border-bottom:1px solid var(--border-glow);padding:8px 12px;flex-shrink:0;flex-wrap:wrap;">
     <button class="btn small btn-red" id="docViewerCloseBtn" style="flex-shrink:0">✖ CLOSE</button>
     <div id="docViewerTitle" style="font-family:var(--font-display);font-size:12px;letter-spacing:1.5px;color:var(--accent-amber);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">DOCUMENT</div>
     <div id="docViewerCount" style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);white-space:nowrap;"></div>
   </div>
-  <div id="docViewerCanvas" style="flex:1;overflow-y:auto;background:#333;padding:10px;display:flex;flex-direction:column;align-items:center;gap:10px;-webkit-overflow-scrolling:touch;">
+  <div id="docViewerCanvas" style="flex:1;overflow-y:auto;overflow-x:hidden;background:#333;padding:10px;display:flex;flex-direction:column;align-items:center;gap:10px;-webkit-overflow-scrolling:touch;">
   </div>
 </div>
   <!-- USER GUIDE MODAL -->
