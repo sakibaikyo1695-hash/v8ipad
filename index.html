@@ -4864,13 +4864,13 @@ function deleteCachedAreaRecord(id){
     });
   }
 
-  function saveDoc(name, base64data, sizebytes){
+  function saveDoc(name, arrayBuffer, sizebytes){
     return openDocDb().then(db => new Promise((resolve, reject) => {
       const tx = db.transaction(DOC_STORE, 'readwrite');
       const store = tx.objectStore(DOC_STORE);
-      const rec = { name, data: base64data, size: sizebytes, date: Date.now() };
+      const rec = { name, data: arrayBuffer, size: sizebytes, date: Date.now() };
       const req = store.add(rec);
-      req.onsuccess = e => resolve(e.target.result); // returns new id
+      req.onsuccess = e => resolve(e.target.result);
       req.onerror   = e => reject(e.target.error);
     }));
   }
@@ -4966,12 +4966,24 @@ function deleteCachedAreaRecord(id){
       overlay.style.display = 'flex';
 
       window.loadPdfJs(function(){
-        const base64 = doc.data.split(',')[1];
-        const binary = atob(base64);
-        const bytes  = new Uint8Array(binary.length);
-        for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-
-        pdfjsLib.getDocument({data: bytes}).promise.then(function(pdf){
+        // doc.data is ArrayBuffer (new format) or base64 string (old format — auto-detect)
+        var pdfData;
+        if(typeof doc.data === 'string'){
+          // Old base64 format — convert safely in chunks to avoid Safari OOM
+          try {
+            var b64 = doc.data.indexOf(',') >= 0 ? doc.data.split(',')[1] : doc.data;
+            var binaryStr = atob(b64);
+            var buf = new Uint8Array(binaryStr.length);
+            for(var i = 0; i < binaryStr.length; i++) buf[i] = binaryStr.charCodeAt(i);
+            pdfData = buf.buffer;
+          } catch(e) {
+            canvas.innerHTML = '<div style="color:#ff4444;font-family:monospace;margin-top:40px;padding:20px;text-align:center">Old format — please delete and re-add this document.</div>';
+            return;
+          }
+        } else {
+          pdfData = doc.data; // ArrayBuffer — direct pass
+        }
+        pdfjsLib.getDocument({data: pdfData}).promise.then(function(pdf){
           canvas.innerHTML = '';
           count.textContent = pdf.numPages + ' page' + (pdf.numPages > 1 ? 's' : '');
           function renderPage(n){
@@ -5053,7 +5065,7 @@ function deleteCachedAreaRecord(id){
             .then(resolve).catch(reject);
         };
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsArrayBuffer(file);
       }));
     });
 
