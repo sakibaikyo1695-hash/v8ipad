@@ -55,14 +55,6 @@ html,body{
 }
 
 /* ======== HOLDING ENTRY CALCULATOR ======== */
-#holdingCanvas{
-  display:block;
-  width:100%;
-  border-radius:6px;
-  border:1px solid var(--border-glow);
-  background:#060c18;
-  margin-top:8px;
-}
 .hold-result-box{
   background:var(--bg-deep);
   border-radius:5px;
@@ -1227,12 +1219,6 @@ textarea{resize:vertical;min-height:55px}
         <span style="color:var(--text-dim)">Enter values above</span>
       </div>
 
-      <!-- Canvas diagram -->
-      <canvas id="holdingCanvas" width="308" height="240"></canvas>
-
-      <div style="font-size:9px;color:var(--text-dim);font-family:var(--font-mono);margin-top:4px;text-align:center;letter-spacing:0.5px">
-        GREEN=Direct · BLUE=Parallel · ORANGE=Teardrop
-      </div>
     </div>
   </div>
 
@@ -5263,7 +5249,7 @@ document.getElementById('docViewerCloseBtn').onclick = function(){
     const open  = panel.style.display !== 'none';
     panel.style.display = open ? 'none' : '';
     arrow.textContent   = open ? '▶ EXPAND' : '▼ COLLAPSE';
-    if(!open) holdCalc(); // redraw diagram when opening
+    if(!open) holdCalc(); // recalc when opening
   };
 
   // ── Turn direction selector ───────────────────────
@@ -5336,12 +5322,14 @@ function determineEntry(ic, radial, turnDir) {
     radial = norm(radial);
 
     const outHdg      = Math.round(norm(ic + 180));
+    // Teardrop hdg = 30° off outbound on the NON-holding side:
+    // Right-hand: non-holding side is LEFT of outbound → outbound − 30 = ic + 150°
+    // Left-hand:  non-holding side is RIGHT of outbound → outbound + 30 = ic + 210°
     const teardropHdg = turnDir === 'R'
-        ? Math.round(norm(ic - 30))
-        : Math.round(norm(ic + 30));
-    const turnWord        = turnDir === 'R' ? 'right' : 'left';
-    const turnToOutbound  = turnDir === 'R' ? 'left'  : 'right';
-    const turnToInbound   = turnDir === 'R' ? 'right' : 'left';
+        ? Math.round(norm(ic + 150))
+        : Math.round(norm(ic + 210));
+    const turnWord     = turnDir === 'R' ? 'right' : 'left';
+    const turnOpposite = turnDir === 'R' ? 'left'  : 'right';
 
     // ── Compute T and P ──
     const T = norm(turnDir === 'R' ? ic - 70 : ic + 70);
@@ -5392,8 +5380,8 @@ function determineEntry(ic, radial, turnDir) {
             cls:   'hold-entry-teardrop',
             T, P,
             instructions:
-                `1. Cross fix, turn ${turnWord} to hdg ${teardropHdg}° (30° offset into hold).\n` +
-                `2. Fly teardrop track for 1 min.\n` +
+                `1. Cross fix, turn ${turnWord} to hdg ${teardropHdg}° (outbound ${outHdg}° offset 30° to ${turnOpposite}).\n` +
+                `2. Fly for 1 min.\n` +
                 `3. Turn ${turnWord} to intercept inbound course ${ic}°.\n` +
                 `4. Cross fix; continue standard hold.`
         };
@@ -5409,9 +5397,9 @@ function determineEntry(ic, radial, turnDir) {
             cls:   'hold-entry-parallel',
             T, P,
             instructions:
-                `1. Cross fix, turn ${turnToOutbound} to outbound hdg ${outHdg}°.\n` +
+                `1. Cross fix, turn ${turnOpposite} to outbound hdg ${outHdg}°.\n` +
                 `2. Fly outbound for 1 min.\n` +
-                `3. Turn ${turnToInbound} 180° to intercept inbound course ${ic}°.\n` +
+                `3. Turn ${turnOpposite} 180° to intercept inbound course ${ic}°.\n` +
                 `4. Cross fix; continue standard hold.`
         };
     }
@@ -5442,7 +5430,6 @@ function determineEntry(ic, radial, turnDir) {
     if(isNaN(inVal) || isNaN(hdgVal)){
       resBox.className = 'hold-result-box';
       resBox.innerHTML = '<span style="color:var(--text-dim)">Enter values above</span>';
-      drawHoldDiagram(null, holdTurnDir);
       return;
     }
 
@@ -5459,256 +5446,7 @@ function determineEntry(ic, radial, turnDir) {
         `T: ${Math.round(result.T)}° | P: ${Math.round(result.P)}° | Turn: ${holdTurnDir==='R'?'↻ RIGHT':'↺ LEFT'}` +
       `</div>` +
       result.instructions.split('\n').map(l=>`<div>${l}</div>`).join('');
-
-    drawHoldDiagram(result, holdTurnDir, ic, radial);
   };
-
-  // ── Canvas diagram ────────────────────────────────
-  // Coordinate helper: polar to canvas XY
-  // Origin at center of canvas, north=up, angle in degrees from north
-  function polar(cx,cy,r,angDeg){
-    const rad = (angDeg - 90) * Math.PI / 180;
-    return { x: cx + r*Math.cos(rad), y: cy + r*Math.sin(rad) };
-  }
-
-  function drawArrow(ctx, x1,y1, x2,y2, color, size=6){
-    const angle = Math.atan2(y2-y1, x2-x1);
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.fillStyle   = color;
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x2,y2);
-    ctx.lineTo(x2 - size*Math.cos(angle-0.4), y2 - size*Math.sin(angle-0.4));
-    ctx.lineTo(x2 - size*Math.cos(angle+0.4), y2 - size*Math.sin(angle+0.4));
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawDashedLine(ctx,x1,y1,x2,y2,color){
-    ctx.save();
-    ctx.setLineDash([4,4]);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-  }
-
-  function drawHoldDiagram(result, turnDir, inboundCourse, aircraftHdg){
-    const canvas = document.getElementById('holdingCanvas');
-    if(!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    ctx.clearRect(0,0,W,H);
-
-    // Background grid dots
-    ctx.fillStyle = 'rgba(0,170,255,0.05)';
-    for(let x=10;x<W;x+=20) for(let y=10;y<H;y+=20){
-      ctx.beginPath(); ctx.arc(x,y,1,0,Math.PI*2); ctx.fill();
-    }
-
-    // ── Layout constants ──
-    // Fix at 55% down, horizontally centered
-    const fx = W/2, fy = H * 0.55;
-    // Holding racetrack dimensions
-    const trackLen = 72;   // half-length of straight (px)
-    const trackR   = 38;   // radius of turn ends
-    // Outbound direction is UP (north on diagram = outbound),
-    // so inbound is DOWN. We keep the diagram oriented with
-    // inbound always pointing down for clarity.
-    const inboundDirDeg  = 180; // always draw inbound pointing down→fix
-    const outboundDirDeg = 0;   // outbound pointing up
-
-    // Colors
-    const clrFix    = '#00e5ff';
-    const clrTrack  = 'rgba(100,160,220,0.35)';
-    const clrInb    = '#7899b8';
-    const clrOutb   = '#4a6a88';
-
-    // ── Draw holding racetrack ──────────────────────
-    // Right-turn hold: oval to the RIGHT of center line
-    // Left-turn hold:  oval to the LEFT
-    const side = turnDir === 'R' ? 1 : -1; // +1=right, -1=left
-
-    ctx.save();
-    ctx.strokeStyle = clrTrack;
-    ctx.lineWidth   = 1.5;
-    ctx.setLineDash([]);
-    ctx.beginPath();
-
-    // Racetrack: two straights (vertical) + two semicircles
-    // Top straight: from (fx, fy-trackLen) left/right turn end
-    // Bottom straight: fix end
-    const ovX = fx + side * trackR; // oval center-X offset
-    const topY    = fy - trackLen;
-    const bottomY = fy;
-
-    // Left & right X of racetrack straights
-    const lx = ovX - side*trackR; // = fx (fix side)
-    const rx = ovX + side*trackR; // = fx + 2*side*trackR (far side)
-
-    ctx.beginPath();
-    // Top semicircle
-    if(turnDir==='R'){
-      ctx.arc(ovX, topY, trackR, Math.PI, 0, false);        // top right semicircle
-      ctx.lineTo(rx, bottomY);
-      ctx.arc(ovX, bottomY, trackR, 0, Math.PI, false);     // bottom right semicircle
-    } else {
-      ctx.arc(ovX, topY, trackR, 0, Math.PI, false);        // top left semicircle
-      ctx.lineTo(rx, bottomY);
-      ctx.arc(ovX, bottomY, trackR, Math.PI, 0, false);     // bottom left semicircle
-    }
-    ctx.closePath();
-    ctx.stroke();
-    ctx.restore();
-
-    // ── Inbound track (dashed, below fix) ──────────
-    const inbBelow = polar(fx, fy, trackLen*0.6, 180); // below fix
-    drawDashedLine(ctx, fx, fy, inbBelow.x, inbBelow.y, clrInb);
-    drawArrow(ctx, inbBelow.x, inbBelow.y+18, fx, fy, clrInb, 5);
-
-    // Label: inbound course
-    if(inboundCourse !== undefined){
-      ctx.save();
-      ctx.fillStyle = '#7899b8';
-      ctx.font = '9px "Share Tech Mono",monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(`IB ${Math.round(inboundCourse)}°`, fx + (turnDir==='R'?-22:22), fy + 30);
-      ctx.restore();
-    }
-
-    // ── Outbound track (dashed, above fix top) ──────
-    const topCenter = {x: fx, y: topY};
-    drawDashedLine(ctx, topCenter.x, topCenter.y, topCenter.x, topCenter.y - 22, clrOutb);
-
-    // ── Fix marker ──────────────────────────────────
-    ctx.save();
-    ctx.strokeStyle = clrFix;
-    ctx.lineWidth   = 1.5;
-    // Triangle (fix symbol)
-    ctx.beginPath();
-    ctx.moveTo(fx, fy-9);
-    ctx.lineTo(fx+7, fy+5);
-    ctx.lineTo(fx-7, fy+5);
-    ctx.closePath();
-    ctx.stroke();
-    // Glow dot
-    const grd = ctx.createRadialGradient(fx,fy,0,fx,fy,9);
-    grd.addColorStop(0,'rgba(0,229,255,0.3)');
-    grd.addColorStop(1,'rgba(0,229,255,0)');
-    ctx.fillStyle = grd;
-    ctx.beginPath(); ctx.arc(fx,fy,9,0,Math.PI*2); ctx.fill();
-    ctx.save();
-    ctx.fillStyle='#00e5ff';
-    ctx.font='bold 8px "Orbitron",sans-serif';
-    ctx.textAlign='center';
-    ctx.fillText('FIX', fx, fy+18);
-    ctx.restore();
-    ctx.restore();
-
-    // ── Radial arrow (from station outward, showing where aircraft is coming from) ──
-    if(aircraftHdg !== undefined && result){
-      // aircraftHdg here is the radial from station.
-      // The radial points FROM the fix toward the aircraft.
-      // We draw an arrow FROM that direction TOWARD the fix.
-      // Map: inbound course = down (180° on screen)
-      const inbRef     = inboundCourse !== undefined ? inboundCourse : 180;
-      const relToInb   = norm(aircraftHdg - inbRef); // radial relative to IC
-      // In diagram, IC = screen-down (180°)
-      const screenAngle = norm(relToInb + 180);      // where radial points on screen
-      const acDist = 60;
-      const acFrom = polar(fx, fy, acDist, screenAngle); // start point (far end of radial)
-
-      ctx.save();
-      ctx.setLineDash([5,3]);
-      ctx.strokeStyle = result.color;
-      ctx.lineWidth   = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(acFrom.x, acFrom.y);
-      ctx.lineTo(fx, fy);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // Arrowhead at fix
-      const ang = Math.atan2(fy - acFrom.y, fx - acFrom.x);
-      ctx.fillStyle = result.color;
-      ctx.beginPath();
-      ctx.moveTo(fx, fy);
-      ctx.lineTo(fx - 8*Math.cos(ang-0.4), fy - 8*Math.sin(ang-0.4));
-      ctx.lineTo(fx - 8*Math.cos(ang+0.4), fy - 8*Math.sin(ang+0.4));
-      ctx.closePath();
-      ctx.fill();
-      // Label near arrow start
-      ctx.fillStyle = result.color;
-      ctx.font = '8px "Share Tech Mono",monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(`R${Math.round(aircraftHdg)}°`, acFrom.x, acFrom.y - 6);
-      ctx.restore();
-    }
-
-    // ── Entry type label ────────────────────────────
-    if(result){
-      ctx.save();
-      ctx.fillStyle = result.color;
-      ctx.font = 'bold 9px "Orbitron",sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(result.type, W/2, 14);
-      ctx.restore();
-    }
-
-    // ── Turn direction indicator (small arc) ─────────
-    ctx.save();
-    ctx.strokeStyle = 'rgba(0,170,255,0.5)';
-    ctx.lineWidth   = 1.5;
-    ctx.beginPath();
-    if(turnDir==='R'){
-      ctx.arc(W-20, 20, 10, Math.PI, 0, false);
-      // Arrowhead for clockwise
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(0,170,255,0.5)';
-      ctx.beginPath();
-      ctx.moveTo(W-10, 20);
-      ctx.lineTo(W-10+5, 20-4);
-      ctx.lineTo(W-10+5, 20+4);
-      ctx.closePath();
-      ctx.fill();
-    } else {
-      ctx.arc(W-20, 20, 10, 0, Math.PI, false);
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(0,170,255,0.5)';
-      ctx.beginPath();
-      ctx.moveTo(W-30, 20);
-      ctx.lineTo(W-30-5, 20-4);
-      ctx.lineTo(W-30-5, 20+4);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.fillStyle = 'rgba(0,170,255,0.6)';
-    ctx.font = '7px "Share Tech Mono",monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(turnDir==='R'?'R/T':'L/T', W-20, 36);
-    ctx.restore();
-
-    // ── No-data placeholder ─────────────────────────
-    if(!result){
-      ctx.save();
-      ctx.fillStyle = 'rgba(56,80,120,0.7)';
-      ctx.font = '10px "Share Tech Mono",monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('Enter inbound course & radial from station', W/2, H-12);
-      ctx.restore();
-    }
-  }
-
-  // Initial blank diagram draw
-  drawHoldDiagram(null, holdTurnDir);
 
 })(); // end Holding Entry Calculator
 
