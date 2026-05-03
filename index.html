@@ -1214,11 +1214,11 @@ textarea{resize:vertical;min-height:55px}
       </div>
 
       <!-- Inputs -->
-<label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">OUTBOUND COURSE (°)</label>
+<label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">INBOUND COURSE (°)</label>
       <input type="number" id="hold_inbound" min="0" max="360" placeholder="e.g. 090"
         style="margin-bottom:6px" oninput="holdCalc()"/>
 
-      <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">AIRCRAFT HEADING (°)</label>
+      <label style="font-size:10px;letter-spacing:1px;color:var(--text-secondary)">RADIAL FROM STATION (°)</label>
       <input type="number" id="hold_heading" min="0" max="360" placeholder="e.g. 215"
         style="margin-bottom:6px" oninput="holdCalc()"/>
 
@@ -5295,116 +5295,139 @@ document.getElementById('docViewerCloseBtn').onclick = function(){
   function norm(a){ return ((a % 360) + 360) % 360; }
 
   // ── Core logic: determine entry type ─────────────
-  // Returns { type, color, instructions }
+  // Returns { type, color, cls, instructions }
   //
-  // ICAO 70/110 sector method — measured from INBOUND COURSE:
+  // Method: radial-based sector, built from inbound course (IC).
   //
-  //   For a RIGHT-turn hold:
-  //     rel = (aircraft_hdg − inbound_course) mod 360
-  //     0°  → 70°  : PARALLEL entry   (aircraft is on the holding side, near inbound)
-  //     70° → 180° : TEARDROP entry   (aircraft is on the non-holding side, offset needed)
-  //     180°→ 360° : DIRECT entry     (aircraft heading is roughly outbound ± 180°)
+  //   RIGHT-hand pattern:
+  //     T = IC − 70°  (teardrop boundary, 70° CCW from IC)
+  //     P = T + 180°  (parallel boundary, opposite of T)
+  //     Radial in arc T→IC  (CW, 70°)  = TEARDROP
+  //     Radial in arc IC→P  (CW, 110°) = PARALLEL
+  //     Everything else                 = DIRECT
+  //     Exactly on T = Either Direct or Teardrop
+  //     Exactly on P = Either Parallel or Direct
   //
-  //   For a LEFT-turn hold: mirror the measurement direction:
-  //     rel = (inbound_course − aircraft_hdg) mod 360
-  //     Same sector thresholds apply.
+  //   LEFT-hand pattern (mirror):
+  //     T = IC + 70°  (teardrop boundary, 70° CW from IC)
+  //     P = T + 180°  (parallel boundary, opposite of T)
+  //     Radial in arc IC→T  (CW, 70°)  = TEARDROP
+  //     Radial in arc P→IC  (CW, 110°) = PARALLEL
+  //     Everything else                 = DIRECT
+  //     Exactly on T = Either Direct or Teardrop
+  //     Exactly on P = Either Parallel or Direct
   //
-  //   ±5° near sector boundaries → "Either entry acceptable"
-  //
-function determineEntry(outboundCourse, aircraftHdg, turnDir) {
+  // Helper: is angle X in the clockwise arc from A to B?
+  // (all values 0–360)
+  function inCWArc(x, start, end) {
+    // arc sweeps clockwise from start to end
+    const s = ((start % 360) + 360) % 360;
+    const e = ((end   % 360) + 360) % 360;
+    const v = ((x     % 360) + 360) % 360;
+    if (s < e) return v > s && v < e;
+    if (s > e) return v > s || v < e; // arc wraps 360
+    return false; // s === e → zero-width arc
+  }
 
+function determineEntry(ic, radial, turnDir) {
     const norm = (x) => ((x % 360) + 360) % 360;
 
-    const BOUNDARY_TOL = 5;
+    ic     = norm(ic);
+    radial = norm(radial);
 
-    // inbound course derived from outbound
-    const inboundCourse = norm(outboundCourse + 180);
-
-    // aircraft direction FROM which it is arriving
-    const aircraftFrom = norm(aircraftHdg + 180);
-
-    // relative angle from inbound axis (key fix)
-    let rel = norm(aircraftFrom - inboundCourse);
-
-    const B_DIRECT_TEARDROP = 70;
-    const B_TEARDROP_PARALLEL = 110;
-
-    const nearB1 = Math.abs(rel - B_DIRECT_TEARDROP) <= BOUNDARY_TOL;
-    const nearB2 = Math.abs(rel - B_TEARDROP_PARALLEL) <= BOUNDARY_TOL;
-
-    const outHdg = Math.round(norm(outboundCourse));
-    const inHdg = Math.round(inboundCourse);
-
+    const outHdg      = Math.round(norm(ic + 180));
     const teardropHdg = turnDir === 'R'
-        ? Math.round(norm(inboundCourse - 30))
-        : Math.round(norm(inboundCourse + 30));
+        ? Math.round(norm(ic - 30))
+        : Math.round(norm(ic + 30));
+    const turnWord        = turnDir === 'R' ? 'right' : 'left';
+    const turnToOutbound  = turnDir === 'R' ? 'left'  : 'right';
+    const turnToInbound   = turnDir === 'R' ? 'right' : 'left';
 
-    const turnWord = turnDir === 'R' ? 'right' : 'left';
+    // ── Compute T and P ──
+    const T = norm(turnDir === 'R' ? ic - 70 : ic + 70);
+    const P = norm(T + 180);
 
-    // ─────────────────────────────
-    // BORDER CASES
-    // ─────────────────────────────
-    if (nearB1 || nearB2) {
+    // ── Boundary check (exact hit on T or P) ──
+    if (radial === T) {
         return {
             type: 'EITHER ENTRY',
             color: '#7c4dff',
-            cls: 'hold-entry-either',
-            rel,
-            instructions: nearB1
-                ? `Near Direct/Teardrop boundary (rel ${Math.round(rel)}°).\n✓ Either Direct or Teardrop entry acceptable.`
-                : `Near Teardrop/Parallel boundary (rel ${Math.round(rel)}°).\n✓ Either Teardrop or Parallel entry acceptable.`
-        };
-    }
-
-    // ─────────────────────────────
-    // DIRECT ENTRY (0–70)
-    // ─────────────────────────────
-    if (rel <= B_DIRECT_TEARDROP) {
-        return {
-            type: 'DIRECT ENTRY',
-            color: '#00e676',
-            cls: 'hold-entry-direct',
-            rel,
+            cls:   'hold-entry-either',
+            T, P,
             instructions:
-                `1. Cross fix, turn ${turnWord} to outbound hdg ${outHdg}°.\n` +
-                `2. Fly outbound for 1 min.\n` +
-                `3. Turn ${turnWord} to intercept inbound course ${inHdg}°.\n` +
-                `4. Cross fix; continue standard hold.`
+                `Radial is on the Direct/Teardrop boundary (T=${T}°).\n` +
+                `✓ Either Direct or Teardrop entry acceptable.`
+        };
+    }
+    if (radial === P) {
+        return {
+            type: 'EITHER ENTRY',
+            color: '#7c4dff',
+            cls:   'hold-entry-either',
+            T, P,
+            instructions:
+                `Radial is on the Parallel/Direct boundary (P=${P}°).\n` +
+                `✓ Either Parallel or Direct entry acceptable.`
         };
     }
 
+    // ── Sector tests ──
+    // RIGHT-hand: Teardrop = CW arc T→IC (70°), Parallel = CW arc IC→P (110°)
+    // LEFT-hand:  Teardrop = CW arc IC→T (70°), Parallel = CW arc P→IC (110°)
+    const inTeardrop = turnDir === 'R'
+        ? inCWArc(radial, T,  ic)
+        : inCWArc(radial, ic, T);
+
+    const inParallel = turnDir === 'R'
+        ? inCWArc(radial, ic, P)
+        : inCWArc(radial, P,  ic);
+
     // ─────────────────────────────
-    // TEARDROP ENTRY (70–110)
+    // TEARDROP
     // ─────────────────────────────
-    if (rel <= B_TEARDROP_PARALLEL) {
+    if (inTeardrop) {
         return {
             type: 'TEARDROP ENTRY',
             color: '#ffab00',
-            cls: 'hold-entry-teardrop',
-            rel,
+            cls:   'hold-entry-teardrop',
+            T, P,
             instructions:
                 `1. Cross fix, turn ${turnWord} to hdg ${teardropHdg}° (30° offset into hold).\n` +
                 `2. Fly teardrop track for 1 min.\n` +
-                `3. Turn ${turnWord} to intercept inbound course ${inHdg}°.\n` +
+                `3. Turn ${turnWord} to intercept inbound course ${ic}°.\n` +
                 `4. Cross fix; continue standard hold.`
         };
     }
 
     // ─────────────────────────────
-    // PARALLEL ENTRY (110–360)
+    // PARALLEL
     // ─────────────────────────────
-    const turnToOutbound = turnDir === 'R' ? 'left' : 'right';
-    const turnToInbound = turnDir === 'R' ? 'right' : 'left';
+    if (inParallel) {
+        return {
+            type: 'PARALLEL ENTRY',
+            color: '#00aaff',
+            cls:   'hold-entry-parallel',
+            T, P,
+            instructions:
+                `1. Cross fix, turn ${turnToOutbound} to outbound hdg ${outHdg}°.\n` +
+                `2. Fly outbound for 1 min.\n` +
+                `3. Turn ${turnToInbound} 180° to intercept inbound course ${ic}°.\n` +
+                `4. Cross fix; continue standard hold.`
+        };
+    }
 
+    // ─────────────────────────────
+    // DIRECT
+    // ─────────────────────────────
     return {
-        type: 'PARALLEL ENTRY',
-        color: '#00aaff',
-        cls: 'hold-entry-parallel',
-        rel,
+        type: 'DIRECT ENTRY',
+        color: '#00e676',
+        cls:   'hold-entry-direct',
+        T, P,
         instructions:
-            `1. Cross fix, turn ${turnToOutbound} to outbound hdg ${outHdg}°.\n` +
+            `1. Cross fix, turn ${turnWord} to outbound hdg ${outHdg}°.\n` +
             `2. Fly outbound for 1 min.\n` +
-            `3. Turn ${turnToInbound} 180° to intercept inbound course ${inHdg}°.\n` +
+            `3. Turn ${turnWord} to intercept inbound course ${ic}°.\n` +
             `4. Cross fix; continue standard hold.`
     };
 }
@@ -5423,19 +5446,21 @@ function determineEntry(outboundCourse, aircraftHdg, turnDir) {
       return;
     }
 
-    const result = determineEntry(norm(inVal), norm(hdgVal), holdTurnDir);
+    const ic     = norm(inVal);
+    const radial = norm(hdgVal);
+    const result = determineEntry(ic, radial, holdTurnDir);
 
     // Build result HTML
     resBox.className = 'hold-result-box ' + result.cls;
     resBox.innerHTML =
       `<div class="hold-entry-type" style="color:${result.color}">${result.type}</div>` +
       `<div style="color:var(--text-secondary);font-size:9px;margin-bottom:4px">` +
-        `Outbound: ${Math.round(norm(inVal))}° | HDG: ${Math.round(norm(hdgVal))}° | ` +
-        `Rel angle: ${Math.round(result.rel)}° | Turn: ${holdTurnDir==='R'?'↻ RIGHT':'↺ LEFT'}` +
+        `IC: ${Math.round(ic)}° | Radial: ${Math.round(radial)}° | ` +
+        `T: ${Math.round(result.T)}° | P: ${Math.round(result.P)}° | Turn: ${holdTurnDir==='R'?'↻ RIGHT':'↺ LEFT'}` +
       `</div>` +
       result.instructions.split('\n').map(l=>`<div>${l}</div>`).join('');
 
-    drawHoldDiagram(result, holdTurnDir, norm(inVal), norm(hdgVal));
+    drawHoldDiagram(result, holdTurnDir, ic, radial);
   };
 
   // ── Canvas diagram ────────────────────────────────
@@ -5589,20 +5614,18 @@ function determineEntry(outboundCourse, aircraftHdg, turnDir) {
     ctx.restore();
     ctx.restore();
 
-    // ── Aircraft heading arrow ───────────────────────
+    // ── Radial arrow (from station outward, showing where aircraft is coming from) ──
     if(aircraftHdg !== undefined && result){
-      // Show aircraft approaching fix from its current heading
-      // (draw arrow ending AT the fix, coming from aircraft heading direction + 180)
+      // aircraftHdg here is the radial from station.
+      // The radial points FROM the fix toward the aircraft.
+      // We draw an arrow FROM that direction TOWARD the fix.
+      // Map: inbound course = down (180° on screen)
+      const inbRef     = inboundCourse !== undefined ? inboundCourse : 180;
+      const relToInb   = norm(aircraftHdg - inbRef); // radial relative to IC
+      // In diagram, IC = screen-down (180°)
+      const screenAngle = norm(relToInb + 180);      // where radial points on screen
       const acDist = 60;
-      const fromDir = norm(aircraftHdg + 180); // direction arrow comes FROM
-      const acStart = polar(fx, fy, acDist, fromDir + 180); // point in approach direction
-      // We rotate the "fromDir" to our diagram frame.
-      // In diagram: inbound=down(180), so we map headings relative to inbound
-      const inbRef   = inboundCourse !== undefined ? inboundCourse : 180;
-      const relToInb = norm(aircraftHdg - inbRef); // aircraft heading relative to inbound
-      // Diagram frame: inbound = 180° on screen
-      const screenAngle = norm(relToInb + 180);
-      const acFrom = polar(fx, fy, acDist, screenAngle + 180);
+      const acFrom = polar(fx, fy, acDist, screenAngle); // start point (far end of radial)
 
       ctx.save();
       ctx.setLineDash([5,3]);
@@ -5613,7 +5636,7 @@ function determineEntry(outboundCourse, aircraftHdg, turnDir) {
       ctx.lineTo(fx, fy);
       ctx.stroke();
       ctx.setLineDash([]);
-      // Arrowhead
+      // Arrowhead at fix
       const ang = Math.atan2(fy - acFrom.y, fx - acFrom.x);
       ctx.fillStyle = result.color;
       ctx.beginPath();
@@ -5622,11 +5645,11 @@ function determineEntry(outboundCourse, aircraftHdg, turnDir) {
       ctx.lineTo(fx - 8*Math.cos(ang+0.4), fy - 8*Math.sin(ang+0.4));
       ctx.closePath();
       ctx.fill();
-      // "HDG" label near aircraft start
+      // Label near arrow start
       ctx.fillStyle = result.color;
       ctx.font = '8px "Share Tech Mono",monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(`HDG ${Math.round(aircraftHdg)}°`, acFrom.x, acFrom.y - 6);
+      ctx.fillText(`R${Math.round(aircraftHdg)}°`, acFrom.x, acFrom.y - 6);
       ctx.restore();
     }
 
@@ -5679,7 +5702,7 @@ function determineEntry(outboundCourse, aircraftHdg, turnDir) {
       ctx.fillStyle = 'rgba(56,80,120,0.7)';
       ctx.font = '10px "Share Tech Mono",monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('Enter inbound course & aircraft heading', W/2, H-12);
+      ctx.fillText('Enter inbound course & radial from station', W/2, H-12);
       ctx.restore();
     }
   }
